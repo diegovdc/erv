@@ -1,6 +1,7 @@
 (ns erv.cps.core
   (:require [clojure.math.combinatorics :as combo]
             [clojure.set :as set]))
+
 (do
   (defn ->set [size generators]
     (->> (combo/combinations generators size) ;; returns all possible pairs
