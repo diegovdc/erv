@@ -4,7 +4,6 @@
                            intervals->degs
                            stateful-interval->degree
                            demo-scale*]]
-   #_[erv.utils.conversions :refer [ratio->cents cps->midi midi->cps]]
    [erv.cps.core :as cps]
    [clojure.spec.alpha :as s]
    [clojure.test :refer [deftest testing is]]))
@@ -12,7 +11,7 @@
 ;; Setup
 (def hexany
   (->> [6 7 5 9]
-       (cps/->set 2)
+       (cps/->cps 2)
        cps/set->maps
        (cps/bound-ratio 2)
        (cps/maps->data :bounded-ratio)))

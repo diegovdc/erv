@@ -52,7 +52,7 @@
                  (try
                    (do
                      (on-event i freq)
-                     (sin :freq freq
+                     (tri :freq freq
                           :dur dur
                           :amp 0.3))
                    (catch Exception e (println e)))))

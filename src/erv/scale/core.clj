@@ -7,8 +7,7 @@
 
 (s/def ::bounded-ratio ratio?)
 (s/def ::bounding-period number?)
-(s/def ::degree
-  (s/keys :req-un [::bounded-ratio ::bounding-period]))
+(s/def ::degree (s/keys :req-un [::bounded-ratio ::bounding-period]))
 (s/def ::scale (s/and not-empty (s/* ::degree)))
 
 
@@ -59,7 +58,7 @@
        (swap! prev-degree + (int interval))))))
 
 (defn demo-scale*
-  "Creates a list of frequencies that run up and down a scale by the specified
+  "Creates a list of frequencies that run up and/or down a scale by the specified
   number of periods"
   ([scale] (demo-scale* scale 1 440 :up-down))
   ([scale periods] (demo-scale* scale periods 440 :up-down))
@@ -100,7 +99,7 @@
 
   (do
     (->> [13 7 2 9]
-         (cps/->set 3)
+         (cps/->cps 3)
          cps/set->maps
          (cps/bound-ratio 3)
          (cps/maps->data :bounded-ratio)
