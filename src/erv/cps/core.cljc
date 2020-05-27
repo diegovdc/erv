@@ -111,11 +111,11 @@
   (filter #(-> % :set (set/intersection generators) not-empty)
           scale))
 
-(defn find-sub-cps
-  [gens cps-set-size sub-cps-set-size subcps-gens-size]
-  (let [base-cps (->cps subcps-gens-size gens)
+(defn find-subcps
+  [generators cps-set-size sub-cps-set-size subcps-generators-size]
+  (let [base-cps (->cps subcps-generators-size generators)
         diff-set-size (Math/abs (- cps-set-size sub-cps-set-size))
-        gens-set (set gens)]
+        gens-set (set generators)]
     (->> base-cps (map
                    (fn [set*]
                      (let [diff (set/difference gens-set set*)

@@ -5,7 +5,7 @@
                                  filter-scale
                                  set->maps
                                  bound-ratio
-                                 find-sub-cps]]
+                                 find-subcps]]
    [clojure.spec.alpha :as s]
    [clojure.test :refer [deftest testing is]]
    [clojure.set :as set]))
@@ -19,14 +19,14 @@
     (is (= #{#{7 1} #{1 5} #{1 3} #{3 5} #{3 7}}
            (->> (filter-scale hex #{1 3}) (map :set) set)))))
 
-(deftest find-sub-cps-test
+(deftest find-subcps-test
   (testing "It returns a `::sub-cps-set` (set of CPSs), therefore guaranteeing uniqueness"
-    (is (s/valid? ::cps/sub-cps-set (find-sub-cps [1 2 3 4 5 6] 3 2 4)))
-    (is (s/valid? ::cps/sub-cps-set (find-sub-cps [1 2 3 4 5 6 7 8] 3 2 4))))
+    (is (s/valid? ::cps/sub-cps-set (find-subcps [1 2 3 4 5 6] 3 2 4)))
+    (is (s/valid? ::cps/sub-cps-set (find-subcps [1 2 3 4 5 6 7 8] 3 2 4))))
 
   (testing "There are 30 hexanies in an eikosany"
-    (is (= 30 (count (find-sub-cps [1 2 3 4 5 6] 3 2 4)))))
+    (is (= 30 (count (find-subcps [1 2 3 4 5 6] 3 2 4)))))
 
   (testing "There are 30 tetrads (major and minor) in an eikosay"
-    (is (= 30 (count (set/union (find-sub-cps [1 2 3 4 5 6] 3 1 4)
-                                (find-sub-cps [1 2 3 4 5 6] 3 3 4)))))))
+    (is (= 30 (count (set/union (find-subcps [1 2 3 4 5 6] 3 1 4)
+                                (find-subcps [1 2 3 4 5 6] 3 3 4)))))))
