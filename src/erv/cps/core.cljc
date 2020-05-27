@@ -17,16 +17,11 @@
 (s/def ::sub-cps-set (s/coll-of ::cps :distinct true))
 
 (defn ->cps [size generators]
-  (->> (combo/combinations (into [] generators) size) ;; returns all possible sets
-       (remove (fn [set*] (when (seq set*)
-                            (and (not= 1  (count set*))
-                                 (apply = set*)))))
-       (map set)
-       set))
-
-#_(->cps 1 #{1 2 3})
-#_(->cps 2 [1 2 3])
-#_(->cps 3 [1 2 3])
+  (if (> size (count generators))
+    #{#{}}
+    (->> (combo/combinations (into [] generators) size)
+         (map set)
+         set)))
 
 (defn set->maps
   "Creates a hexany-map"
@@ -35,13 +30,15 @@
        (map (fn [pair] {:set pair}))))
 
 (defn within-bounding-period
-  [bounding-intvl ratio]
-  {:pre [(> bounding-intvl 1)]}
+  "Transposes a ratio withing a bounding-period.
+  The octave is a `bounding-period` of 2,the tritave of 3, etc."
+  [bounding-period ratio]
+  {:pre [(> bounding-period 1)]}
   (loop [r ratio]
     (cond
-      (> r bounding-intvl) (recur (/ r bounding-intvl))
-      (< r 1) (recur (* r bounding-intvl))
-      (= bounding-intvl r) 1
+      (> r bounding-period) (recur (/ r bounding-period))
+      (< r 1) (recur (* r bounding-period))
+      (= bounding-period r) 1
       :else r)))
 
 #_(within-bounding-period 2 1/21)
@@ -124,8 +121,6 @@
                        (map (fn [d] (set (map #(set/union % d) hex))) diffs))))
          (apply concat)
          set)))
-
-
 
 
 (comment (require '[user :refer [spy]]

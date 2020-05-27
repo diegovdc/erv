@@ -10,6 +10,29 @@
    [clojure.test :refer [deftest testing is]]
    [clojure.set :as set]))
 
+(->cps 1 #{1 2 3})
+(->cps 4 [1 2 3])
+(->cps 3 [1 2 3 5])
+(deftest ->cps-test
+  (testing "Creates all possible combinations of the given generators"
+    (is (= #{#{1 3} #{1 2} #{3 2}}
+           (->cps 2 [1 2 3])))
+    (is (= #{#{1 2 3}}
+           (->cps 3 [1 2 3])))
+    (is (= #{#{3 2 5} #{1 3 5} #{1 2 5} #{1 3 2}}
+           (->cps 3 [1 2 3 5]))))
+  (testing "Can take a set as an input"
+    (is (= #{#{1} #{2} #{3}}
+           (->cps 1 #{1 2 3})))
+    (is (= #{#{1 3} #{1 2} #{3 2}}
+           (->cps 2 #{1 2 3}))))
+  (testing "If `size` is 0, it returns #{#{}}"
+    (is (= #{#{}}
+           (->cps 0 #{1 2 3}))))
+  (testing "If `size` is > than `(count generators)`, it returns `#{#{}}` "
+    (is (= #{#{}}
+           (->cps 4 #{1 2 3})))))
+
 (deftest filter-scale-test
   (let [hex (->> [1 3 5 7] (->cps 2) set->maps (bound-ratio 2)
                  (maps->data :bounded-ratio) :scale) ]
