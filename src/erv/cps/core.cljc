@@ -1,7 +1,8 @@
 (ns erv.cps.core
   (:require [clojure.math.combinatorics :as combo]
             [clojure.spec.alpha :as s]
-            [clojure.set :as set]))
+            [clojure.set :as set]
+            [clojure.string :as str]))
 
 (comment
   ;; data prototype
@@ -122,6 +123,20 @@
          (apply concat)
          set)))
 
+(defn- generators->str [generators]
+  (->> generators sort (str/join ".")))
+
+(defn get-cps-description [cps]
+  (let [constants (apply set/intersection cps)
+        non-constants (set/difference (apply set/union cps) constants)]
+    (if (not-empty constants)
+      (str (generators->str constants) "-" (generators->str non-constants))
+      (generators->str non-constants))))
+
+(defn subcps-sets->map [subcps-set]
+  (->>  subcps-set
+        (map (juxt get-cps-description identity))
+        (into {})))
 
 (comment (require '[user :refer [spy]]
                   '[clojure.test :refer [deftest testing is run-tests]]))
