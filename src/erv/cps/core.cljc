@@ -1,8 +1,10 @@
 (ns erv.cps.core
-  (:require [clojure.math.combinatorics :as combo]
-            [clojure.spec.alpha :as s]
-            [clojure.set :as set]
-            [clojure.string :as str]))
+  (:require
+   [clojure.math.combinatorics :as combo]
+   [clojure.set :as set]
+   [clojure.spec.alpha :as s]
+   [clojure.string :as str]
+   [erv.utils.core :refer [validate]]))
 
 (comment
   ;; data prototype
@@ -14,7 +16,8 @@
              3/2 :another-scale}
     :graph :some-graph}})
 
-(s/def ::cps (s/and (s/coll-of set? :distinct true) #(->> % (map count) (apply =))))
+(s/def ::cps (s/and (s/coll-of set? :distinct true)
+                    #(->> % (map count) (apply =))))
 (s/def ::sub-cps-set (s/coll-of ::cps :distinct true))
 
 (defn ->cps [size generators]
@@ -104,7 +107,8 @@
 
 
 (defn filter-scale
-  "Get a subscale that only has degrees related to the `generators`"
+  "Get a subscale that only has degrees related to the `generators`.
+  `generators` must be a set."
   [scale generators]
   (filter #(-> % :set (set/intersection generators) not-empty)
           scale))
@@ -127,16 +131,30 @@
   (->> generators sort (str/join ".")))
 
 (defn get-cps-description [cps]
+  {:pre [(validate ::cps cps)]}
   (let [constants (apply set/intersection cps)
         non-constants (set/difference (apply set/union cps) constants)]
-    (if (not-empty constants)
+    (cond
+      (and (not-empty constants) (not-empty non-constants))
       (str (generators->str constants) "-" (generators->str non-constants))
-      (generators->str non-constants))))
+      (not-empty constants) (generators->str constants)
+      (not-empty non-constants) (generators->str non-constants)
+      :else "")))
 
 (defn subcps-sets->map [subcps-set]
   (->>  subcps-set
         (map (juxt get-cps-description identity))
         (into {})))
+
+(defn filter-subcps-map [subcps-map generators & [match-all?]]
+  (if (empty? generators)
+    subcps-map
+    (let [match-fn (if match-all? every? some)
+          search-fns (map #(fn [k] (str/includes? k (str %))) generators)
+          filtered-keys (filter (comp (partial match-fn true?)
+                                      (apply juxt search-fns))
+                                (keys subcps-map))]
+      (select-keys subcps-map filtered-keys))))
 
 (comment (require '[user :refer [spy]]
                   '[clojure.test :refer [deftest testing is run-tests]]))
