@@ -4,6 +4,7 @@
    [clojure.set :as set]
    [clojure.spec.alpha :as s]
    [clojure.string :as str]
+   [clojure.walk :as walk]
    [erv.utils.core :refer [validate]]))
 
 (comment
@@ -67,7 +68,8 @@
   (update graph node-from (comp set conj) node-to))
 
 (defn maps->graph
-  "A map that connects each node with all the other nodes that share one elemnt of the set"
+  "A map that connects each node with all the other nodes that share one element
+  of the set"
   [hexany-maps]
   (loop [nodes (into [] hexany-maps)
          graph {}]
@@ -146,15 +148,40 @@
         (map (juxt get-cps-description identity))
         (into {})))
 
-(defn filter-subcps-map [subcps-map generators & [match-all?]]
-  (if (empty? generators)
-    subcps-map
-    (let [match-fn (if match-all? every? some)
-          search-fns (map #(fn [k] (str/includes? k (str %))) generators)
-          filtered-keys (filter (comp (partial match-fn true?)
-                                      (apply juxt search-fns))
-                                (keys subcps-map))]
-      (select-keys subcps-map filtered-keys))))
+(defn filter-subcps-map
+  ([subcps-map generators] (filter-subcps-map subcps-map generators false))
+  ([subcps-map generators match-all?]
+   (if (empty? generators)
+     subcps-map
+     (let [match-fn (if match-all? every? some)
+           search-fns (map #(fn [k] (str/includes? k (str %))) generators)
+           filtered-keys (filter (comp (partial match-fn true?)
+                                       (apply juxt search-fns))
+                                 (keys subcps-map))]
+       (select-keys subcps-map filtered-keys)))))
 
-(comment (require '[user :refer [spy]]
-                  '[clojure.test :refer [deftest testing is run-tests]]))
+(defn interval [ratio-a ratio-b] (/ ratio-b ratio-a))
+
+(defn sets-interval [set-a set-b] (/ (apply * set-b) (apply * set-a)))
+
+(do
+  (defn cps-intervals [cps]
+    (->> (combo/combinations (into [] cps) 2)
+         (reduce (fn [acc [set-a set-b]]
+                   (-> acc
+                       (update set-a assoc set-b (sets-interval set-a set-b))
+                       (update set-b assoc set-a (sets-interval set-b set-a))))
+                 {})))
+  (cps-intervals (->cps 2 [1 3 5 7])))
+
+(do
+  (defn cps-intervals-as-ratios [cps]
+    (->> cps
+         cps-intervals
+         (walk/postwalk #(if (set? %) (apply * %) %))))
+  (cps-intervals-as-ratios (->cps 2 [1 3 5 7])))
+
+(comment
+  (require
+   '[user :refer [spy]]
+   '[clojure.test :refer [deftest testing is run-tests]]))

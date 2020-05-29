@@ -11,7 +11,9 @@
                                  find-subcps
                                  get-cps-description
                                  subcps-sets->map
-                                 filter-subcps-map]]))
+                                 filter-subcps-map
+                                 cps-intervals
+                                 cps-intervals-as-ratios]]))
 
 (deftest ->cps-test
   (testing "Creates all possible combinations of the given generators"
@@ -131,3 +133,40 @@
                                "1.3.5" #{#{3 5} #{1 5} #{1 3}},
                                "1.5.7" #{#{7 1} #{7 5} #{1 5}}}
                               #{})))))
+
+(deftest cps-intervals-test
+  (testing "Calculates all intervals between a set and any other set in a cps"
+      (= (cps-intervals (->cps 2 [1 3 5 7]))
+         {#{7 1} {#{7 5} 5, #{3 5} 15/7, #{7 3} 3, #{1 5} 5/7, #{1 3} 3/7},
+          #{7 5} {#{7 1} 1/5, #{3 5} 3/7, #{7 3} 3/5, #{1 5} 1/7, #{1 3} 3/35},
+          #{3 5} {#{7 1} 7/15, #{7 5} 7/3, #{7 3} 7/5, #{1 5} 1/3, #{1 3} 1/5},
+          #{7 3} {#{7 1} 1/3, #{7 5} 5/3, #{3 5} 5/7, #{1 5} 5/21, #{1 3} 1/7},
+          #{1 5} {#{7 1} 7/5, #{7 5} 7, #{3 5} 3, #{7 3} 21/5, #{1 3} 3/5},
+          #{1 3} {#{7 1} 7/3, #{7 5} 35/3, #{3 5} 5, #{7 3} 7, #{1 5} 5/3}}))
+  (testing "Calculates all intervals between a set and any other *related* set"
+    (= (cps-intervals (->cps 2 [1 3 5 7]) true)
+       {#{7 1} {#{7 5} 5, #{7 3} 3, #{1 5} 5/7, #{1 3} 3/7},
+        #{7 5} {#{7 1} 1/5, #{3 5} 3/7, #{7 3} 3/5, #{1 5} 1/7},
+        #{7 3} {#{7 1} 1/3, #{7 5} 5/3, #{3 5} 5/7, #{1 3} 1/7},
+        #{1 5} {#{7 1} 7/5, #{7 5} 7, #{3 5} 3, #{1 3} 3/5},
+        #{1 3} {#{7 1} 7/3, #{3 5} 5, #{7 3} 7, #{1 5} 5/3},
+        #{3 5} {#{7 5} 7/3, #{7 3} 7/5, #{1 5} 1/3, #{1 3} 1/5}})))
+
+(deftest cps-intervals-as-ratios-test
+  (testing "Same as `cps-intervals` but expresses sets as ratios"
+    (testing "Calculates all intervals between a set and any other set in a cps"
+      (= (cps-intervals-as-ratios (->cps 2 [1 3 5 7]))
+         {7 {35 5, 15 15/7, 21 3, 5 5/7, 3 3/7},
+          35 {7 1/5, 15 3/7, 21 3/5, 5 1/7, 3 3/35},
+          15 {7 7/15, 35 7/3, 21 7/5, 5 1/3, 3 1/5},
+          21 {7 1/3, 35 5/3, 15 5/7, 5 5/21, 3 1/7},
+          5 {7 7/5, 35 7, 15 3, 21 21/5, 3 3/5},
+          3 {7 7/3, 35 35/3, 15 5, 21 7, 5 5/3}}))
+    (testing "Calculates all intervals between a set and any other *related* set"
+      (= (cps-intervals-as-ratios (->cps 2 [1 3 5 7]) true)
+         {7 {35 5, 21 3, 5 5/7, 3 3/7},
+          35 {7 1/5, 15 3/7, 21 3/5, 5 1/7},
+          21 {7 1/3, 35 5/3, 15 5/7, 3 1/7},
+          5 {7 7/5, 35 7, 15 3, 3 3/5},
+          3 {7 7/3, 15 5, 21 7, 5 5/3},
+          15 {35 7/3, 21 7/5, 5 1/3, 3 1/5}}))))
