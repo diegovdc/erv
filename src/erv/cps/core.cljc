@@ -164,22 +164,70 @@
 
 (defn sets-interval [set-a set-b] (/ (apply * set-b) (apply * set-a)))
 
-(do
-  (defn cps-intervals [cps]
-    (->> (combo/combinations (into [] cps) 2)
-         (reduce (fn [acc [set-a set-b]]
-                   (-> acc
-                       (update set-a assoc set-b (sets-interval set-a set-b))
-                       (update set-b assoc set-a (sets-interval set-b set-a))))
-                 {})))
-  (cps-intervals (->cps 2 [1 3 5 7])))
+(defn cps-intervals
+  ([cps] (cps-intervals cps false))
+  ([cps only-direct?]
+   (->> (combo/combinations (into [] cps) 2)
+        (reduce (fn [acc [set-a set-b]]
+                  (if (and only-direct?
+                           (empty? (set/intersection set-a set-b)))
+                    acc
+                    (-> acc
+                        (update set-a assoc set-b (sets-interval set-a set-b))
+                        (update set-b assoc set-a (sets-interval set-b set-a)))))
+                {}))))
 
-(do
-  (defn cps-intervals-as-ratios [cps]
-    (->> cps
-         cps-intervals
-         (walk/postwalk #(if (set? %) (apply * %) %))))
-  (cps-intervals-as-ratios (->cps 2 [1 3 5 7])))
+(defn cps-intervals-as-ratios
+  ([cps] (cps-intervals-as-ratios cps false))
+  ([cps only-direct?]
+   (->> (cps-intervals cps only-direct?)
+        (walk/postwalk #(if (set? %) (apply * %) %)))))
+
+(defn denominator*
+  "Trys to get the denominator for a number,
+  if it's a ratio, returns the denominator,
+  if the number is an integer, returns 1,
+  if it is a float rationalizes and then returns the denominator."
+  [n]
+  (try (-> n rationalize denominator)
+       (catch Exception e 1)))
+
+(defn- group-intervals-by-denominator* [intervals-map]
+  (->> intervals-map
+       (group-by (comp denominator* val))
+       (map (juxt key (comp (partial into {}) val)))
+       (into {})))
+
+(defn cps-intervals-by-denominator*
+  "Takes the return value of `cps-intervals` and groups the intervals by their
+  denominator"
+  [cps-intervals]
+  (->> cps-intervals
+       (map (juxt key (comp group-intervals-by-denominator* val)))
+       (into {})))
+
+
+(defn cps-intervals-by-denominator
+  "As`cps-intervals-by-denominator*` but composes `cps-intervals` so it only
+  takes a `cps`"
+  ([cps] (cps-intervals-by-denominator cps false))
+  ([cps only-direct?]
+   (-> cps (cps-intervals only-direct?)
+       cps-intervals-by-denominator*)))
+
+(defn set-chord
+  "Returns a map of sets and intervals for a given set and optionally an interval
+  (denominator)"
+  ([cps-intervals-by-denominator set]
+   (let [sets (-> cps-intervals-by-denominator
+                  (get-in [set])
+                  vals
+                  (->> (apply merge)))]
+     (if sets (assoc sets set 1) '())))
+  ([cps-intervals-by-denominator set interval]
+   (let [sets (-> cps-intervals-by-denominator
+                  (get-in [set interval]))]
+     (if sets (assoc sets set interval) '()))))
 
 (comment
   (require
