@@ -2,7 +2,8 @@
   "Inspired by John Cage's Number pieces"
   (:require
    [overtone.core :refer [now]]
-   [hexany :as cps]
+   [erv.utils.conversions :as conv]
+   [erv.cps.core :as cps]
    [time-time.sequencing-2 :as sequencer]
    [sin]))
 
@@ -33,7 +34,7 @@
   (map (fn [_] (atom {:f (fn [{:keys [data voice]}]
                           (let [durs (get-durs data voice)
                                 i (data :index)]
-                            (sin/sin* :freq (get-freq i)
+                            (sin/tri* :freq (get-freq i)
                                       :dur (wrap-at i durs)
                                       :amp (rand 0.3))
                             (swap! voice assoc :durs [(rand-nth durs)])))
@@ -59,24 +60,34 @@
 
 (def voices (make-voices 5))
 
-(doseq [v voices] (play! v))
+(comment
+  (doseq [v voices] (play! v)))
 
 (def hexany
-  (->> [9 3 5 7]
-       (cps/->set 2)
+  (->> [11 13 27 17]
+       (cps/->cps 2)
        cps/set->maps
        (cps/bound-ratio 3/2)
+       (cps/maps->data :bounded-ratio)))
+
+(def hexany-2
+  (->> [9 3 5 7]
+       (cps/->cps 2)
+       cps/cps-intervals-by-denominator
+       (#(cps/set-chord % #{9 3} 3))
+       keys
+       cps/set->maps
+       (cps/bound-ratio 2)
        (cps/maps->data :bounded-ratio)))
 
 (comment (->> hexany :scale ))
 
 (defn get-freq [index]
-  (->> hexany :scale
-       (filter #(-> % :set ((fn [s] (or #_(contains? s 9)
-                                       (contains? s 7))))))
-       (wrap-at index)
+  (->> hexany-2 :scale
+       #_(wrap-at index)
+       rand-nth
        :bounded-ratio
-       (* 220 (rand-nth [1 3/2 2/3 9/4 27/8]))))
+       (* 200 (rand-nth [1 2 1/2 1/4 4]))))
 
 (defn get-durs [data voice]
   [(rand 10)])
@@ -95,3 +106,6 @@
 (comment
   (overtone.core/recording-start "~/Desktop/hexany-3:2.wav")
   (overtone.core/recording-stop ))
+
+
+(map (fn [n] (* 880 n)) [1/5 1/3 1/7  1])

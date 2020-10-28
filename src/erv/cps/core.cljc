@@ -189,8 +189,9 @@
   if the number is an integer, returns 1,
   if it is a float rationalizes and then returns the denominator."
   [n]
-  (try (-> n rationalize denominator)
-       (catch Exception e 1)))
+  #? (:clj (try (-> n rationalize denominator)
+                (catch Exception e 1))
+      :cljs 1))
 
 (defn- group-intervals-by-denominator* [intervals-map]
   (->> intervals-map
@@ -232,4 +233,5 @@
 (comment
   (require
    '[user :refer [spy]]
-   '[clojure.test :refer [deftest testing is run-tests]]))
+   '[clojure.test :refer [deftest testing is run-tests]]
+   '[erv.utils.conversions :as conv]))

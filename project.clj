@@ -6,5 +6,6 @@
   :dependencies [[org.clojure/clojure "1.10.0"]
                  [org.clojure/math.combinatorics "0.1.6"]
                  [time-time "0.1.0-SNAPSHOT"]
+                 [com.taoensso/timbre "4.10.0"]
                  [overtone "0.10.6"]]
   :repl-options {:init-ns erv.core})

@@ -1,0 +1,5 @@
+{:deps {org.clojure/clojure {:mvn/version "1.10.0"}
+        org.clojure/math.combinatorics {:mvn/version "0.1.6"}
+        time-time {:local/root "../time-time"}
+        overtone {:mvn/version"0.10.6"}
+        com.taoensso/timbre {:mvn/version"4.10.0"}}}

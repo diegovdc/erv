@@ -20,5 +20,22 @@
       (o/pan2 pan)
       (->> (o/out 0))))
 
+(o/defsynth tri*
+  [freq 400
+   dur 1
+   porta 0
+   porta-amp 0.3
+   porta-amp-speed 0.3
+   amp 1
+   pan 0]
+  (-> (o/lf-tri:ar (o/lag:kr freq porta))
+      (* amp (o/env-gen:kr (o/envelope
+                            [0 1 0.1 0]
+                            [0.1 dur 0.3 ]
+                            :lin)
+                           :action o/FREE))
+      (o/pan2 pan)
+      (->> (o/out 0))))
+
 
 (comment (o/stop))

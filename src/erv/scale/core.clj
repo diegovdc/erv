@@ -2,8 +2,8 @@
   (:require
    [erv.utils.conversions :refer [cps->name*]]
    [erv.utils.core :refer [validate wrap-at round2]]
-   [erv.utils.sequencer :refer [play!]]
-   [clojure.spec.alpha :as s]))
+   [clojure.spec.alpha :as s]
+   [clojure.string :as str]))
 
 (s/def ::bounded-ratio ratio?)
 (s/def ::bounding-period number?)
@@ -33,7 +33,7 @@
   frequency, i.e 1 will play the degree one `period` above."
   [scale base-freq degree
    & {:keys [period] :or {period 0}}]
-  {:pre [(validate ::scale scale)]}
+  #_{:pre [(validate ::scale scale)]}
   (let [scale-len (count scale)
         period* (+ period (quot degree scale-len))
         degree* (mod degree scale-len)
@@ -76,38 +76,47 @@
                     #_:up-down (concat degrees (rest (reverse degrees))))]
      (map #(deg->freq scale base-freq %) degrees*))))
 
-(defn demo!
-  [scale &
-   {:keys [periods base-freq note-dur direction on-event]
-    :or {periods 1
-         base-freq 440
-         note-dur 300
-         direction :up-down
-         on-event (fn [i freq] (-> (wrap-at i scale)
-                                  (dissoc :bounding-period :bounded-ratio)
-                                  (assoc :note (cps->name* freq))
-                                  println))}}]
-  (play! (demo-scale* scale periods base-freq direction) note-dur
-         :on-event on-event))
-
 
 
 (comment
   (require '[erv.utils.conversions :refer [ratio->cents cps->midi midi->cps]]
            '[erv.cps.core :as cps]
-           '[clojure.test :refer [testing is]])
-
-  (do
-    (->> [13 7 2 9]
-         (cps/->cps 3)
+           '[clojure.test :refer [testing is]]
+           '[clojure.string :as str]
+           '[erv.utils.sequencer :refer [play!]])
+  (defn demo!
+    [scale &
+     {:keys [periods base-freq note-dur direction on-event]
+      :or {periods 1
+           base-freq 440
+           note-dur 300
+           direction :up-down
+           on-event (fn [i freq] (-> (wrap-at i scale)
+                                    (dissoc :bounding-period :bounded-ratio)
+                                    (assoc :note (cps->name* freq))
+                                    println))}}]
+    (play! (demo-scale* scale periods base-freq direction) note-dur
+           :on-event on-event))
+  (def scale
+    (->> [13 7 11 9 5]
+         (cps/->cps 2)
          cps/set->maps
-         (cps/bound-ratio 3)
+         (cps/bound-ratio 2)
          (cps/maps->data :bounded-ratio)
          :scale
+
+         #_
          (#(cps/filter-scale % #{7}))
          #_user/spy
-         (#(demo! %
-                  :periods 1
-                  :base-freq 320
-                  :note-dur 300
-                  :direction :up)))))
+         #_(#(demo! %
+                    :periods 1
+                    :base-freq 320
+                    :note-dur 300
+                    :direction :up))))
+
+  (let [freqs (map #(cps->midi (deg->freq scale 10 %)) (range (count scale)))]
+    (str "[" (->> (map #(- % (first freqs)) freqs)
+                  (str/join ", "))
+         "]")
+
+    ))
