@@ -5,7 +5,7 @@
    [clojure.spec.alpha :as s]
    [clojure.string :as str]))
 
-(s/def ::bounded-ratio ratio?)
+(s/def ::bounded-ratio #?(:clj ratio? :cljs number?))
 (s/def ::bounding-period number?)
 (s/def ::degree (s/keys :req-un [::bounded-ratio ::bounding-period]))
 (s/def ::scale (s/and not-empty (s/* ::degree)))
