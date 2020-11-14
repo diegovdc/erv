@@ -1,6 +1,6 @@
 (ns erv.utils.core
-  (:require [clojure.set :as set]
-            [clojure.spec.alpha :as s]))
+  (:require [clojure.spec.alpha :as s]
+            [clojure.set :as set]))
 
 (defn validate [spec input]
   (or (s/valid? spec input)

@@ -1,10 +1,11 @@
 (ns erv.mos.submos
   (:require [erv.utils.core :refer [rotate coprime?]]
-            [erv.mos.mos :as mos]))
+            [erv.mos.mos :as mos]
+            [clojure.set :as set]))
 
 
 (defn get-all-rotations [pattern]
-  (mapv #(into [] (rotate pattern (- %)))
+  (mapv #(into [] (rotate pattern %))
         (range (count pattern))))
 
 (defn group [mos pattern]
@@ -19,6 +20,16 @@
                mos*
                (rest pattern))
         (conj groups group)))))
+
+#_(->> [5 4 5 4 4]
+     get-all-rotations
+     (map #(->> (group  [1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 2] %)
+                (map (partial apply + ))))
+sip     (deduplicate #{})
+     :mos-set
+     (into []))
+
+
 
 (defn groups->submos [groups]
   (mapv #(apply + %) groups))
@@ -36,8 +47,7 @@
                   acc
                   {:mos-set (conj mos-set mos)
                    :already-in (apply conj mos-set rots)})))
-            {:mos-set mos-set
-             :already-in mos-set}
+            {:mos-set mos-set :already-in mos-set}
             new-moses))
   (deduplicate #{} [[1 1 2] [1 2 1] [3 2 3]]))
 
@@ -49,16 +59,18 @@
        set))
 
 
-;; FIXME the true-submos logic is not correct nor exhaustive and needs a lot of work
-(defn true-submos? [mos generator]
-  (boolean ((mos-freqs mos) generator)))
-(defn true-submos-2? [mos generator pattern pattern-generator]
-  (and ((all-mos-freqs mos generator) (mos-freqs pattern))
-       (true-submos? mos pattern-generator)))
-(comment
-  (true-submos-2? [6 5 6 5 5] 11 [2 2 1] 2)
-  (boolean ((mos-freqs [2 3 2 3 3]) 2)))
+(defn make-submos-for-pattern [mos pattern]
+  (->> mos
+       get-all-rotations
+       (mapv #(groups->submos (group % pattern)))
+       (deduplicate #{})
+       :mos-set))
 
+(defn true-submos? [period generator submos]
+  (let [mos (mos/make-mos period generator)
+        size (count (first submos))
+        mos-row  (set (get-all-rotations (first (filter #(= (count %) size) mos))))]
+    (boolean (seq (set/intersection mos-row submos)))))
 
 (defn make-submos-for-generator [mos mos-generator pattern-generator]
   (let [patterns (mos/make-mos (count mos) pattern-generator)
@@ -66,21 +78,12 @@
     (->> patterns
          (remove #(or (= 1 (count %)) (= #{1} (set %))))
          (map (fn [pattern]
-                {:pattern pattern
-                 :period period
-                 :generator pattern-generator
-                 ;; FIXME
-                 :NOTE "true-submos? is not trustworthy at the moment"
-                 :true-submos? (true-submos-2? mos
-                                               mos-generator
-                                               pattern
-                                               pattern-generator)
-                 :submos (->> mos
-                              get-all-rotations
-                              (mapv #(groups->submos (group % pattern)))
-
-                              (deduplicate #{})
-                              :mos-set)}))
+                (let [submos (make-submos-for-pattern mos pattern)]
+                  {:pattern pattern
+                   :period period
+                   :generator pattern-generator
+                   :true-submos? (true-submos? (apply + mos) mos-generator submos)
+                   :submos submos})))
          (into []))))
 
 (defn filter-mos-members [mos-set submos]
@@ -94,9 +97,10 @@
      (mapcat
       (fn [gen]
         (->> gen (make-submos-for-generator mos mos-generator)
-             (map (fn [submos-data]
-                    (update submos-data :submos
-                            #(filter-mos-members mos-to-exclude  %))))))
+             ;; NOTE not filtering so that true submos can be seen by the consumer (they are defined by containing one of the scales of the mos)
+             #_(map (fn [submos-data]
+                      (update submos-data :submos
+                              #(filter-mos-members mos-to-exclude  %))))))
       generators))))
 
 (comment

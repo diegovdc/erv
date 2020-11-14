@@ -29,6 +29,8 @@
         (recur (conj mos-points next-point))
         (conj mos-points period)))))
 
+(get-mos-points 12 5)
+
 (defn mos-points->mos
   [mos-points]
   (->> (drop-last 1 mos-points)
@@ -54,12 +56,14 @@
 (defn mos-as-intervals [mos] (mapv get-diffs mos))
 
 
-(defn make-mos [period generator]
-  (let [true-mos? (coprime? period generator)]
-    (when-not true-mos?
-      (timbre/warn "The generated data is not a true MOS because the period (" period ") and generator (" generator ") are not coprime."))
-    (with-meta
-      (->> (get-mos-points period generator)
-           mos-points->mos
-           mos-as-intervals)
-      {:true-mos? true-mos?})))
+(def make-mos
+  (memoize
+   (fn [period generator]
+     (let [true-mos? (coprime? period generator)]
+       (when-not true-mos?
+         (timbre/warn "The generated data is not a true MOS because the period (" period ") and generator (" generator ") are not coprime."))
+       (with-meta
+         (->> (get-mos-points period generator)
+              mos-points->mos
+              mos-as-intervals)
+         {:true-mos? true-mos?})))))

@@ -17,7 +17,7 @@
 (defn- transpose-by [bounding-period scale-period]
   (apply (get-transp-fn scale-period)
          1 ;; important when transp-fn is division
-         (repeat (Math/abs scale-period) bounding-period)))
+         (repeat (Math/abs (double scale-period)) bounding-period)))
 
 (defn deg->freq
   "Given a `scale` as spec'd above, a `base-freq` and a `degree`,
