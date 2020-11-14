@@ -22,12 +22,12 @@
         (conj groups group)))))
 
 #_(->> [5 4 5 4 4]
-     get-all-rotations
-     (map #(->> (group  [1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 2] %)
-                (map (partial apply + ))))
-sip     (deduplicate #{})
-     :mos-set
-     (into []))
+       get-all-rotations
+       (map #(->> (group  [1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 2] %)
+                  (map (partial apply + ))))
+       sip     (deduplicate #{})
+       :mos-set
+       (into []))
 
 
 
@@ -50,6 +50,31 @@ sip     (deduplicate #{})
             {:mos-set mos-set :already-in mos-set}
             new-moses))
   (deduplicate #{} [[1 1 2] [1 2 1] [3 2 3]]))
+(get-all-rotations [1 2 3])
+(do
+  (defn submos-list-by-mos
+    "Groups the submos-list by mos (independently of the rotation)
+  `submos-list`example:
+  ```
+  '({:mos [5 5 2], :degree 0}
+   {:mos [5 4 3], :degree 1}
+   {:mos [5 5 2], :degree 2}
+   {:mos [4 5 3], :degree 3}
+   {:mos [5 5 2], :degree 4})
+  ```"
+    [submos-list]
+    (:mos-map
+     (reduce (fn [{:keys [rotations-map included-rotations-set] :as acc} mos-data]
+               (let [rots (get-all-rotations (mos-data :mos))]
+                 (if (included? included-rotations-set rots)
+                   (update-in acc [:mos-map (rotations-map (set rots))] conj mos-data)
+                   (-> acc
+                       (assoc-in [:mos-map (mos-data :mos)] [mos-data])
+                       (assoc-in [:rotations-map (set rots)] (mos-data :mos))
+                       (update :included-rotations-set #(apply conj % rots))))))
+             {:mos-map {} :rotations-map {} :included-rotations-set #{}}
+             submos-list)))
+  (submos-list-by-mos '({:mos [5 5 2], :degree 0} {:mos [5 4 3], :degree 1} {:mos [5 5 2], :degree 2} {:mos [4 5 3], :degree 3} {:mos [5 5 2], :degree 4})))
 
 (def mos-freqs (fn [mos] (-> mos frequencies vals set)))
 
@@ -62,15 +87,21 @@ sip     (deduplicate #{})
 (defn make-submos-for-pattern [mos pattern]
   (->> mos
        get-all-rotations
-       (mapv #(groups->submos (group % pattern)))
-       (deduplicate #{})
-       :mos-set))
+       (map-indexed (fn [index mos*] {:mos (groups->submos (group mos* pattern))
+                                     :degree index}))))
 
 (defn true-submos? [period generator submos]
   (let [mos (mos/make-mos period generator)
         size (count (first submos))
         mos-row  (set (get-all-rotations (first (filter #(= (count %) size) mos))))]
+    (println mos-row)
     (boolean (seq (set/intersection mos-row submos)))))
+
+(true-submos? 12 5  (set (map :mos '({:mos [5 5 2], :degree 0}
+                                     {:mos [5 4 3], :degree 1}
+                                     {:mos [5 5 2], :degree 2}
+                                     {:mos [4 5 3], :degree 3}
+                                     {:mos [5 5 2], :degree 4}))))
 
 (defn make-submos-for-generator [mos mos-generator pattern-generator]
   (let [patterns (mos/make-mos (count mos) pattern-generator)
@@ -82,8 +113,10 @@ sip     (deduplicate #{})
                   {:pattern pattern
                    :period period
                    :generator pattern-generator
-                   :true-submos? (true-submos? (apply + mos) mos-generator submos)
-                   :submos submos})))
+                   :true-submos? (true-submos? (apply + mos) mos-generator
+                                               (set (map :mos submos)))
+                   :submos submos
+                   :submos-by-mos (submos-list-by-mos submos)})))
          (into []))))
 
 (defn filter-mos-members [mos-set submos]
@@ -102,7 +135,7 @@ sip     (deduplicate #{})
                       (update submos-data :submos
                               #(filter-mos-members mos-to-exclude  %))))))
       generators))))
-
+(make-all-submos [3 2 3 2 2] 5)
 (comment
 ;;; NOTE three approaches
   ;; 1. Tanabe Cycle: rotate the mos and group it with the pattern
@@ -110,10 +143,10 @@ sip     (deduplicate #{})
         pattern [2 1 2 1 1]]
     (->> mos
          get-all-rotations
-         (mapv #(groups->submos (group % pattern)))
+         (map-indexed (fn [index mos] [index (groups->submos (group mos pattern))]))
          ;; NOTE may be a good idea to keep the degrees that correspond to each submos
-         (deduplicate #{})
-         :mos-set))
+         #_(deduplicate #{})
+         #_ :mos-set))
 
   ;; 2. Rotate the pattern and group the mos with it
   ;; (yields a retrograde version of the submoses)
