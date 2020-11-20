@@ -49,6 +49,8 @@
               {:moses moses :waiting (conj waiting point)})))
         {:moses [] :waiting [(last mos-points)]})
        :moses
+       ;; The next line would add the scale of only intervals of size 1,
+       ;; we probably don't have any use for it.
        (#(conj % (range (count mos-points))))))
 
 (comment (make-mos 12 5))
