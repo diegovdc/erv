@@ -3,9 +3,10 @@
    [erv.utils.conversions :refer [cps->name*]]
    [erv.utils.core :refer [validate wrap-at round2]]
    [clojure.spec.alpha :as s]
-   [clojure.string :as str]))
+   [clojure.string :as str]
+   #? (:clj [erv.utils.sequencer :refer [play!]])))
 
-(s/def ::bounded-ratio #?(:clj ratio? :cljs number?))
+(s/def ::bounded-ratio number?)         ;; Used to be `ratio?` but changed to `number?` to support `edos`
 (s/def ::bounding-period number?)
 (s/def ::degree (s/keys :req-un [::bounded-ratio ::bounding-period]))
 (s/def ::scale (s/and not-empty (s/* ::degree)))
@@ -18,6 +19,10 @@
   (apply (get-transp-fn scale-period)
          1 ;; important when transp-fn is division
          (repeat (Math/abs (double scale-period)) bounding-period)))
+
+(defn get-period [transp-period scale-len degree]
+  (let [transp-period* (if (> 0 degree) (- transp-period 1) transp-period)]
+    (+ transp-period* (quot degree scale-len))))
 
 (defn deg->freq
   "Given a `scale` as spec'd above, a `base-freq` and a `degree`,
@@ -35,7 +40,7 @@
    & {:keys [period] :or {period 0}}]
   #_{:pre [(validate ::scale scale)]}
   (let [scale-len (count scale)
-        period* (+ period (quot degree scale-len))
+        period* (get-period period scale-len degree)
         degree* (mod degree scale-len)
         {:keys [bounded-ratio bounding-period]} (nth scale degree*)
         period-transp (transpose-by bounding-period period*)]
@@ -77,6 +82,20 @@
      (map #(deg->freq scale base-freq %) degrees*))))
 
 
+#?(:clj
+   (defn demo!
+     [scale &
+      {:keys [periods base-freq note-dur direction on-event]
+       :or {periods 1
+            base-freq 440
+            note-dur 300
+            direction :up-down
+            on-event (fn [i freq] (-> (wrap-at i scale)
+                                     (dissoc :bounding-period :bounded-ratio)
+                                     (assoc :note (cps->name* freq))
+                                     println))}}]
+     (play! (demo-scale* scale periods base-freq direction) note-dur
+            :on-event on-event)))
 
 (comment
   (require '[erv.utils.conversions :refer [ratio->cents cps->midi midi->cps]]
@@ -84,19 +103,7 @@
            '[clojure.test :refer [testing is]]
            '[clojure.string :as str]
            '[erv.utils.sequencer :refer [play!]])
-  (defn demo!
-    [scale &
-     {:keys [periods base-freq note-dur direction on-event]
-      :or {periods 1
-           base-freq 440
-           note-dur 300
-           direction :up-down
-           on-event (fn [i freq] (-> (wrap-at i scale)
-                                    (dissoc :bounding-period :bounded-ratio)
-                                    (assoc :note (cps->name* freq))
-                                    println))}}]
-    (play! (demo-scale* scale periods base-freq direction) note-dur
-           :on-event on-event))
+
   (def scale
     (->> [13 7 11 9 5]
          (cps/->cps 2)

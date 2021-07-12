@@ -27,12 +27,21 @@
     (->> (combo/combinations (into [] generators) size)
          (map set)
          set)))
+(comment
+  ;; TODO, for stellating the hexany
+
+  (set/union (combo/combinations [1 2 3 4 1 2 3 4] 2)
+             (let [gens [1 2 3 4]]
+               (->> (combo/combinations gens 3)
+                    (map (fn [c] (let [diff (set/difference (set gens) (set c))]
+                                  (set/union c (map #(/ 1 %) diff)))))
+                    (map set)
+                    set))))
 
 (defn set->maps
   "Creates a hexany-map"
-  [hexany-set]
-  (->> hexany-set
-       (map (fn [pair] {:set pair}))))
+  [cps-set]
+  (map (fn [pair] {:set pair}) cps-set))
 
 (defn within-bounding-period
   "Transposes a ratio withing a bounding-period.
@@ -107,7 +116,6 @@
      :graphs {:full full-graph
               :simple (graph->simple-graph full-graph)}}))
 
-
 (defn filter-scale
   "Get a subscale that only has degrees related to the `generators`.
   `generators` must be a set."
@@ -116,7 +124,7 @@
           scale))
 
 (defn find-subcps
-  [generators cps-set-size sub-cps-set-size subcps-generators-size]
+  [cps-set-size generators sub-cps-set-size subcps-generators-size]
   (let [base-cps (->cps subcps-generators-size generators)
         diff-set-size (Math/abs (- cps-set-size sub-cps-set-size))
         gens-set (set generators)]
@@ -128,6 +136,30 @@
                        (map (fn [d] (set (map #(set/union % d) hex))) diffs))))
          (apply concat)
          set)))
+
+(comment
+  ;; For test
+  (= (find-subcps 2 [:a :b :c :d :e] 2 4)
+     #{#{#{:e :a} #{:b :a} #{:c :a} #{:e :c} #{:e :b} #{:c :b}}
+       #{#{:e :a} #{:b :d} #{:b :a} #{:e :b} #{:e :d} #{:d :a}}
+       #{#{:c :d} #{:b :d} #{:e :c} #{:e :b} #{:e :d} #{:c :b}}
+       #{#{:c :d} #{:e :a} #{:c :a} #{:e :c} #{:e :d} #{:d :a}}
+       #{#{:c :d} #{:b :d} #{:b :a} #{:c :a} #{:d :a} #{:c :b}}}))
+
+(comment
+  "If the common generator is factored out of the 3)5 dekany, the resulting hexany intersects with the corresponding 2)5 hexany"
+  (defn mult-factors [vs] (let [factors (apply set/intersection vs)]
+                            (if (seq factors) (apply * factors) 1)))
+  (= (get (->> (find-subcps 2 [1 3 5 7 9] 2 4)
+               subcps-sets->map
+               (map (fn [[k vs]] [k (set (map #(/ (apply * %) (mult-factors vs)) vs))]))
+               (into {}))
+          "1.3.7.9")
+     (get (->> (find-subcps 3 [1 3 5 7 9] 2 4)
+               subcps-sets->map
+               (map (fn [[k vs]] [k (set (map #(/ (apply * %) (mult-factors vs)) vs))]))
+               (into {}))
+          "5-1.3.7.9")))
 
 (defn- generators->str [generators]
   (->> generators sort (str/join ".")))
@@ -230,8 +262,18 @@
                   (get-in [set interval]))]
      (if sets (assoc sets set interval) '()))))
 
+(defn make
+  [size generators & {:keys [period] :or {period 2}}]
+  (->> generators
+       (->cps 2) ;; 2 y 3 funcionan muy bien
+       set->maps
+       (bound-ratio period)
+       (maps->data :bounded-ratio)))
+
 (comment
   (require
    '[user :refer [spy]]
    '[clojure.test :refer [deftest testing is run-tests]]
    '[erv.utils.conversions :as conv]))
+
+;; GRAPH traversal, finding cycles

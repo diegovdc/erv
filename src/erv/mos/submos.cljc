@@ -1,12 +1,7 @@
 (ns erv.mos.submos
-  (:require [erv.utils.core :refer [rotate coprime?]]
+  (:require [clojure.set :as set]
             [erv.mos.mos :as mos]
-            [clojure.set :as set]))
-
-
-(defn get-all-rotations [pattern]
-  (mapv #(into [] (rotate pattern %))
-        (range (count pattern))))
+            [erv.utils.core :refer [get-all-rotations rotate]]))
 
 (defn group [mos pattern]
   (loop [groups []
@@ -161,9 +156,7 @@
   ([mos mos-generator mos-to-exclude]
    ;; We have enough with only the first half of the range as the second half
    ;;   mirrors the first.
-   ;; Also we probably don't want the generator of size `1` as it does not yield
-   ;;   particularly interesting scales.
-   (let [generators (range 2 (Math/ceil (/ (count mos) 2)))]
+   (let [generators (range 1 (Math/ceil (/ (count mos) 2)))]
      (mapcat #(make-submos-for-generator mos mos-generator %) generators))))
 
 

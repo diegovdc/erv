@@ -1,6 +1,6 @@
 (ns erv.utils.core
-  (:require [clojure.spec.alpha :as s]
-            [clojure.set :as set]))
+  (:require [clojure.set :as set]
+            [clojure.spec.alpha :as s]))
 
 (defn validate [spec input]
   (or (s/valid? spec input)
@@ -31,3 +31,7 @@
 
 (defn coprime? [& ns]
   (->> ns (map (comp set prime-factors)) (apply set/intersection) empty?))
+
+(defn get-all-rotations [pattern]
+  (mapv #(into [] (rotate pattern %))
+        (range (count pattern))))

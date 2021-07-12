@@ -17,6 +17,7 @@
             [erv.utils.core :refer [coprime?]]))
 
 (do
+  ;; TODO, find a proper name and move to utils; called `degs->scale` in mawra.core
   (defn get-diffs [points]
     (->> (partition 2 1 points)
          (mapv (fn [[a b]] (- b a)))))
