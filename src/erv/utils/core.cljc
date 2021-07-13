@@ -35,3 +35,5 @@
 (defn get-all-rotations [pattern]
   (mapv #(into [] (rotate pattern %))
         (range (count pattern))))
+
+(defn interval [ratio-a ratio-b] (/ ratio-b ratio-a))

@@ -1,11 +1,10 @@
 (ns erv.cps.core
-  (:require
-   [clojure.math.combinatorics :as combo]
-   [clojure.set :as set]
-   [clojure.spec.alpha :as s]
-   [clojure.string :as str]
-   [clojure.walk :as walk]
-   [erv.utils.core :refer [validate]]))
+  (:require [clojure.math.combinatorics :as combo]
+            [clojure.set :as set]
+            [clojure.spec.alpha :as s]
+            [clojure.string :as str]
+            [clojure.walk :as walk]
+            [erv.utils.core :refer [interval validate]]))
 
 (comment
   ;; data prototype
@@ -24,9 +23,12 @@
 (defn ->cps [size generators]
   (if (> size (count generators))
     #{#{}}
-    (->> (combo/combinations (into [] generators) size)
-         (map set)
-         set)))
+    (with-meta
+      (->> (combo/combinations (into [] generators) size)
+           (map set)
+           set)
+      {::type (str size ")" (count generators))})))
+
 (comment
   ;; TODO, for stellating the hexany
 
@@ -59,17 +61,21 @@
 
 (defn bound-ratio
 ;;; TODO, how to be able to specify multiple bounding-periods
-  "Calculate all the ratios within the bounding-period (e.g. octave, tritave, etc.)"
-  [bounding-period hexany-map]
-  (->> hexany-map
-       (map (fn [node*]
-              (let [ratio (apply * (node* :set))]
-                (assoc node*
-                       :ratio ratio
-                       :bounded-ratio (within-bounding-period
-                                       bounding-period
-                                       ratio)
-                       :bounding-period bounding-period))))))
+  "Calculate all the ratios within the bounding-period (e.g. octave, tritave, etc.)
+  `normalization-generator` a generator used to normalize the scale so that it
+  has a first root at 1/1.
+  i.e. for a cps with generators [1 3 5 7] you can use either 3, 5, or 7"
+  ([bounding-period cps-map] (bound-ratio bounding-period 1 cps-map ))
+  ([bounding-period normalization-generator cps-map]
+   (->> cps-map
+        (map (fn [node*]
+               (let [ratio (/ (apply * (node* :set)) normalization-generator)]
+                 (assoc node*
+                        :ratio ratio
+                        :bounded-ratio (within-bounding-period
+                                        bounding-period
+                                        ratio)
+                        :bounding-period bounding-period)))))))
 
 (defn add-edge
   "Adds to the set of edges of `node-from` the value `node-to`"
@@ -109,12 +115,21 @@
        (into {})))
 
 (defn maps->data
-  [scale-sort-fn hexany-maps]
-  (let [full-graph (maps->graph hexany-maps)]
-    {:scale (sort-by scale-sort-fn hexany-maps)
-     :nodes hexany-maps
+  [scale-sort-fn cps-maps]
+  (let [full-graph (maps->graph cps-maps)]
+    {:scale (sort-by scale-sort-fn cps-maps)
+     ;; :nodes hexany-maps
      :graphs {:full full-graph
               :simple (graph->simple-graph full-graph)}}))
+
+(defn +meta [size generators norm-gen data]
+  (merge {:meta {:scale :cps
+                 :size size
+                 :generators (sort (into [] generators))
+                 :period (-> data :scale first :bounding-period)
+                 :normalized-by norm-gen
+                 ::type (str size ")" (count generators))}}
+         data))
 
 (defn filter-scale
   "Get a subscale that only has degrees related to the `generators`.
@@ -127,13 +142,16 @@
   [cps-set-size generators sub-cps-set-size subcps-generators-size]
   (let [base-cps (->cps subcps-generators-size generators)
         diff-set-size (Math/abs (- cps-set-size sub-cps-set-size))
-        gens-set (set generators)]
+        gens-set (set generators)
+        meta* {::type (str sub-cps-set-size ")" subcps-generators-size)}]
     (->> base-cps (map
                    (fn [set*]
                      (let [diff (set/difference gens-set set*)
                            diffs (->cps diff-set-size diff)
                            hex (->cps sub-cps-set-size set*)]
-                       (map (fn [d] (set (map #(set/union % d) hex))) diffs))))
+                       (map
+                        (fn [d] (with-meta (set (map #(set/union % d) hex)) meta*))
+                        diffs))))
          (apply concat)
          set)))
 
@@ -145,6 +163,9 @@
        #{#{:c :d} #{:b :d} #{:e :c} #{:e :b} #{:e :d} #{:c :b}}
        #{#{:c :d} #{:e :a} #{:c :a} #{:e :c} #{:e :d} #{:d :a}}
        #{#{:c :d} #{:b :d} #{:b :a} #{:c :a} #{:d :a} #{:c :b}}}))
+
+(-> (find-subcps 2 [:a :b :c :d :e] 2 4) first meta)
+
 
 (comment
   "If the common generator is factored out of the 3)5 dekany, the resulting hexany intersects with the corresponding 2)5 hexany"
@@ -180,6 +201,25 @@
         (map (juxt get-cps-description identity))
         (into {})))
 
+(do
+  (defn subcps-sets->data [period norm-gen subcps-set]
+    (->>  subcps-set
+          (map (juxt get-cps-description
+                     #(->> %
+                           set->maps
+                           (bound-ratio period norm-gen)
+                           (maps->data :bounded-ratio)
+                           (+meta (-> % first count) (set (apply concat %)) norm-gen))))
+          (into {})))
+
+  #_(defn +subcps [cps-set-size generators sub-cps-set-size subcps-generators-size])
+
+  (->> (find-subcps 2 [1 3 5 7 9] 2 4)
+       (subcps-sets->data 2 1)))
+
+(set (apply concat #{#{1 3} #{1 5}}))
+
+
 (defn filter-subcps-map
   ([subcps-map generators] (filter-subcps-map subcps-map generators false))
   ([subcps-map generators match-all?]
@@ -191,8 +231,6 @@
                                        (apply juxt search-fns))
                                  (keys subcps-map))]
        (select-keys subcps-map filtered-keys)))))
-
-(defn interval [ratio-a ratio-b] (/ ratio-b ratio-a))
 
 (defn sets-interval [set-a set-b] (/ (apply * set-b) (apply * set-a)))
 
@@ -239,7 +277,6 @@
        (map (juxt key (comp group-intervals-by-denominator* val)))
        (into {})))
 
-
 (defn cps-intervals-by-denominator
   "As`cps-intervals-by-denominator*` but composes `cps-intervals` so it only
   takes a `cps`"
@@ -263,17 +300,44 @@
      (if sets (assoc sets set interval) '()))))
 
 (defn make
-  [size generators & {:keys [period] :or {period 2}}]
+  [size generators & {:keys [period norm-gen] :or {period 2 norm-gen 1}}]
   (->> generators
        (->cps 2) ;; 2 y 3 funcionan muy bien
        set->maps
-       (bound-ratio period)
-       (maps->data :bounded-ratio)))
+       (bound-ratio period norm-gen)
+       (maps->data :bounded-ratio)
+       (+meta size generators norm-gen)))
+
+
+(defn +subcps [cps-data set-size generators-size]
+  (let [{:keys [size generators period normalized-by]} (:meta cps-data)]
+    (update cps-data :subcps merge
+            (->> (find-subcps size generators set-size generators-size)
+                 (subcps-sets->data period normalized-by)))))
+
+(comment
+  (-> (make 2 [1 3 5 7 9] :norm-gen 9)
+      (+subcps 2 4)
+      (+subcps 3 4)
+      (+subcps 2 3)
+      :subcps
+      (get "1.5.9"))
+
+  ;;  nested subcps
+
+  (-> (make 2 [1 3 5 7 9 11])
+      (+subcps 2 5)
+      (update-in [:subcps "1.3.5.7.9"] +subcps 2 4)
+      :subcps
+      (get "1.3.5.7.9")
+      :subcps
+      (get "1.3.5.7")))
+
 
 (comment
   (require
    '[user :refer [spy]]
    '[clojure.test :refer [deftest testing is run-tests]]
-   '[erv.utils.conversions :as conv]))
-
-;; GRAPH traversal, finding cycles
+   '[erv.utils.conversions :as conv]
+   '[erv.scale.core :as scale])
+  (scale/print-scale-intervals! (:scale (make 2 [1 3 5 7]))))
