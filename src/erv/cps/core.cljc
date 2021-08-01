@@ -1,10 +1,13 @@
 (ns erv.cps.core
-  (:require [clojure.math.combinatorics :as combo]
-            [clojure.set :as set]
-            [clojure.spec.alpha :as s]
-            [clojure.string :as str]
-            [clojure.walk :as walk]
-            [erv.utils.core :refer [interval validate]]))
+  (:require
+   #? (:cljs [com.gfredericks.exact :as e])
+   [com.gfredericks.exact :as e]
+   [clojure.math.combinatorics :as combo]
+   [clojure.set :as set]
+   [clojure.spec.alpha :as s]
+   [clojure.string :as str]
+   [clojure.walk :as walk]
+   [erv.utils.core :refer [interval validate]]))
 
 (comment
   ;; data prototype
