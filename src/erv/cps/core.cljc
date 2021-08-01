@@ -118,7 +118,7 @@
   [scale-sort-fn cps-maps]
   (let [full-graph (maps->graph cps-maps)]
     {:scale (sort-by scale-sort-fn cps-maps)
-     ;; :nodes hexany-maps
+     :nodes (sort-by :ratio cps-maps)
      :graphs {:full full-graph
               :simple (graph->simple-graph full-graph)}}))
 
@@ -302,7 +302,7 @@
 (defn make
   [size generators & {:keys [period norm-gen] :or {period 2 norm-gen 1}}]
   (->> generators
-       (->cps 2) ;; 2 y 3 funcionan muy bien
+       (->cps size)
        set->maps
        (bound-ratio period norm-gen)
        (maps->data :bounded-ratio)
@@ -340,4 +340,6 @@
    '[clojure.test :refer [deftest testing is run-tests]]
    '[erv.utils.conversions :as conv]
    '[erv.scale.core :as scale])
-  (scale/print-scale-intervals! (:scale (make 2 [1 3 5 7]))))
+  (scale/print-scale-intervals! (:nodes (make 2 [3 5 7 11]))
+                                :unit :ratios
+                                :ratio-type :ratio))

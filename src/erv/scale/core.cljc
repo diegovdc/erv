@@ -11,7 +11,9 @@
     :cljs
     [(:require
       [clojure.spec.alpha :as s]
-      [clojure.string :as str])]))
+      [clojure.string :as str]
+      [erv.utils.conversions :refer [cps->name* ratio->cents]]
+      [erv.utils.core :refer [wrap-at interval]])]))
 
 (s/def ::bounded-ratio number?)         ;; Used to be `ratio?` but changed to `number?` to support `edos`
 (s/def ::bounding-period number?)
@@ -139,12 +141,15 @@
 (do
   (defn print-scale-intervals!
     [scale
-     & {:keys [unit] :or {unit :cents}} ;; #{:cents :ratios}
+     & {:keys [unit ratio-type]
+        :or {unit :cents ;; #{:cents :ratios}
+             ratio-type :bounded-ratio ;; #{:bounded-ratio :ratio}
+             }}
      ]
     (let [conversor (case unit
                       :ratios identity
                       (comp int ratio->cents))
-          data (let [ratios (->> scale (map :bounded-ratio))]
+          data (let [ratios (->> scale (map ratio-type))]
                  (map (fn [a b] (concat [a] b))
                       (concat ["ratio"] ratios)
                       (concat [ratios]
@@ -153,9 +158,7 @@
                                    ratios))))]
       #?(:clj (t/table data)
          :cljs (js/console.table data))))
-
-  (print-scale-intervals! (:scale (cps/make 2 [1 3 5 7]))
-                          :unit :ratios))
+  )
 
 (comment
   (require '[erv.cps.core :as cps])
