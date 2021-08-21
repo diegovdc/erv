@@ -1,6 +1,7 @@
 (ns erv.marwa.core
   (:require [clojure.string :as str]
-            [erv.mos.mos :as mos]))
+            [erv.mos.mos :as mos]
+            [erv.utils.core :refer [coprimes]]))
 
 ;; cf. pg 3 of  http://anaphoria.com/xen9mar.pdf
 
@@ -28,10 +29,11 @@
     (->> scale
          repeat
          (apply concat)
-         (partition interval 1)
+         (partition interval)
          (map (partial apply +))
          (take (count scale))))         ; only take the intervals before the cycle repeats
-  (get-interval-sequence kalayan 3))
+  (get-interval-sequence [1 1 1 4 1 1 4] 2))
+
 
 
 (do
@@ -159,10 +161,14 @@
   (permutate-range-fwd [5 9 7 7 7 7 7 7 7 9] 0 2))
 
 (do
+
   (defn all-range-permutations [scale range-len initial-index]
-    (let [perms-start-indexes (-> (count scale) (- range-len 2 initial-index)
-                                  range
-                                  (->> (map (partial + initial-index))))]
+    (let [perms-start-indexes
+          ;; TODO ask Kraig
+          ;; here the `2` prevents the closing interval from being next to itself, but this doesn't seem to work for scales made up of ratios
+          (-> (count scale) (- range-len 2 initial-index)
+              range
+              (->> (map (partial + initial-index))))]
       (reduce (fn [acc idx]
                 (let [prev-scale (:scale (last acc))
                       scale  (permutate-range-fwd prev-scale idx (+ idx range-len))]
@@ -175,7 +181,27 @@
                 :group-size range-len
                 :initial-index initial-index}]
               perms-start-indexes)))
-  (all-range-permutations [5 9 5 9 7 7 7 7 7 9] 4 0))
+
+  (defn all-range-permutations-2 [scale range-len initial-index]
+    ;; This version removes the `-2` from `perms-start-indexes` so that it works with ratio based scales
+    (let [perms-start-indexes
+          (-> (count scale) (- range-len initial-index)
+              range
+              (->> (map (partial + initial-index))))]
+      (reduce (fn [acc idx]
+                (let [prev-scale (:scale (last acc))
+                      scale  (permutate-range-fwd prev-scale idx (+ idx range-len))]
+                  (conj acc {:scale scale
+                             :group-size range-len
+                             :initial-index (inc idx)
+                             }))
+                )
+              [{:scale scale
+                :group-size range-len
+                :initial-index initial-index}]
+              perms-start-indexes)))
+  #_(all-range-permutations [5 9 5 9 7 7 7 7 7 9] 4 0)
+  (comment (all-range-permutations-2 (into [] (get-ratio-interval-sequence [9/8 9/8 9/8 256/243 9/8 9/8 256/243] 3)) 2 0)))
 
 
 ;;; I think this is DONE
@@ -218,6 +244,21 @@
   (all-permutations-for-base-permutation
    {:group-size 4, :scale [5 9 5 9 7 7 7 7 7 9], :initial-index 0}))
 
+
+;;  These next two functions will use all-range-permutations-2 see comments on that function
+(defn all-sub-range-permutations-2 [scales]
+  (mapcat (fn [{:keys [scale group-size initial-index]}]
+            (map #(assoc % :parent scale)
+                 (all-range-permutations-2 scale (dec group-size)
+                                           (inc initial-index))))
+          scales))
+
+(defn all-permutations-for-base-permutation-2
+  [{:keys [scale group-size initial-index]}]
+  (loop [perms [(all-range-permutations-2 scale group-size initial-index)]]
+    (if (-> perms last first :group-size (> 1))
+      (recur (conj perms (all-sub-range-permutations-2 (last perms))))
+      perms)))
 ;; G = generator, C = closing interval, R = reciprocal interval
 (do
   (defn get-reciprocal-interval
@@ -234,7 +275,10 @@
 
 (do
   ;; #dbg
-  (defn base-permutations [scale-len G C]
+  (defn base-permutations
+    "`G` = generating interval
+  `C` = closing interval"
+    [scale-len G C]
     (let [
           ;; [min* max*] (sort [G C])
           ;; R (- min* (- max* min*))
@@ -253,6 +297,7 @@
            (range 1 max-groups))))
   #_(base-permutations 10 7 9))
 (base-permutations 5 5 4)
+(base-permutations 5 5 4)
 
 (defn remove-duplicates [coll]
   (:coll (reduce (fn [{:keys [coll already-in] :as acc}
@@ -262,7 +307,19 @@
                         :already-in (conj already-in el)}))
                  {:coll [] :already-in #{}} coll)))
 
-(base-permutations 10 7 9)
+(do
+  (defn get-ratio-interval-sequence-2
+    [scale interval]
+    (->> scale
+         repeat
+         (apply concat)
+         (partition interval)
+         (map (partial apply *))
+         (take (count scale))))
+  (get-ratio-interval-sequence-2 [9/8 9/8 10/9 16/15 9/8 9/8 256/243] 3)
+  (get-ratio-interval-sequence-2 [32/27 9/8 135/128 4096/3645 9/8 135/128 16/15] 3))
+
+
 (comment
   (->> (base-permutations 10 7 9)
        (map all-permutations-for-base-permutation)
@@ -270,14 +327,11 @@
        #_(map #(dissoc % :group-size :initial-index :parent))
        (map :scale)
        remove-duplicates
-       clojure.pprint/pprint)
-
-telete
+       #_  clojure.pprint/pprint)
 
   (->> (base-permutations 7 5 6)
        (map all-permutations-for-base-permutation)
        flatten
-       #_(map #(dissoc % :group-size :initial-index :parent))
        (map :scale)
        remove-duplicates
        clojure.pprint/pprint)
@@ -285,10 +339,69 @@ telete
   (->> (base-permutations 5 5 4)
        (map all-permutations-for-base-permutation)
        flatten
+       (map :scale)
+       remove-duplicates
+       #_   clojure.pprint/pprint)
+
+  (into []
+        (get-ratio-interval-sequence
+         [10/9 9/8 9/8 16/15 10/9 9/8 16/15] 3))
+  (do
+    (defn intervals->scale [intervals]
+      (->> intervals
+           (reduce (fn [acc ivl]
+                     (conj acc
+                           (let [point (* (last acc) ivl)]
+                             (if (> point 2)
+                               (/ point 2) point))))
+                   [1])
+           sort
+           (partition 2 1)
+           (map (fn [[a b]] (/ b a)))))
+    (intervals->scale [45/32 27/20 4/3 4/3 4/3 4/3 4/3]))
+
+
+;;; testing the permutation algorithm with some of the cases from the xen9mar.pdf
+  (->> [{:group-size 2,
+         :scale (into []
+                      (get-ratio-interval-sequence-2
+                       [9/8 9/8 9/8 256/243 9/8 9/8 256/243] 3))
+         :initial-index 0}]
+       (map all-permutations-for-base-permutation-2)
+       flatten
+       (map :scale)
+       remove-duplicates
+       (map (fn [intervals] (intervals->scale intervals)))
+       )
+
+  (->> [{:group-size 2,
+         :scale (into []
+                      (get-ratio-interval-sequence-2
+                       [10/9 9/8 9/8 16/15 10/9 9/8 16/15] 2))
+         :initial-index 0}]
+       (map all-permutations-for-base-permutation-2)
+       flatten
+       (map :scale)
+       remove-duplicates
+       (map (fn [intervals] (intervals->scale intervals)))
+       )
+
+  (->> [{:group-size 2, :scale
+         (into []
+               (get-ratio-interval-sequence-2
+                [32/27 9/8 135/128 4096/3645 9/8 135/128 16/15] 3))
+         :initial-index 1}]
+       (map all-permutations-for-base-permutation-2)
+       flatten
        #_(map #(dissoc % :group-size :initial-index :parent))
        (map :scale)
        remove-duplicates
-       clojure.pprint/pprint))
+       #_(remove #(not= (last %) 4/3))
+       #_(map (fn [intervals] {:fourths intervals :scale (intervals->scale intervals)}))
+       ))
+
+
+
 
 (comment
   ;;  not sure what I am doing....
@@ -311,6 +424,12 @@ telete
   (get-interval-sequence [1 1 1 4 1 1 4] 6) ; (9 12 12 9 12 12 12)
   ;; Exploring cases like 7)13 where the closing interval appears
   ;; several times in the sequence
+
+
+
+
+
+
   8 8 11 8 11 8 11
   a. [5 11] 11 8 11 8 11
   b. 11 [5 11] 8 11 8 11
@@ -338,3 +457,55 @@ telete
 (degs->scale 13 (interval-seq->degs 13 [11 5 8 11 11 8 11])); b.
 
 #_(degs->scale 13 (interval-seq->degs 13 [8 8 11 8 11 8 11]))
+
+()
+(degs->scale 13 (interval-seq->degs 13 '(7 7 7 7 7 7 10)))
+(defn intervals->scale-2 [scale-size intervals]
+  (degs->scale scale-size (interval-seq->degs scale-size intervals)))
+
+#_(coprimes 13)
+(comment
+  ;; APP Flow
+
+  ;; user inputs scale
+  #_(def scale [1 1 1 4 1 1 4])
+  (def scale [2 2 2 3 2 2 3])
+  #_(def scale [1 2 2 1 2 2 2])
+  (def scale-size (apply + scale))
+  (-> scale-size)
+  ;; system gives the user a set of interval sequences to choose
+  ;; ...but sometimes just one(?)
+  (map (fn [generator]
+         [generator
+          (get-interval-sequence scale generator)])
+       (range 1 (count scale)))
+
+  ;; (7 7 7 7 7 7 10)
+
+  (base-permutations (count scale) 7 8)
+
+  (->> (base-permutations (count scale) 7 8)
+       (map all-permutations-for-base-permutation)
+       flatten
+       (map :scale) ;; generator list
+       remove-duplicates
+       (map #(intervals->scale-2 scale-size %)) ;; scale list
+       #_(remove #(some zero? %))
+       )
+
+  )
+
+(comment
+;;; testing the permutation algorithm with some of the cases from the xen9mar.pdf
+  ;; Fig. 2
+  (->> [{:group-size 2,
+         :scale (into []
+                      (get-ratio-interval-sequence-2
+                       [9/8 9/8 9/8 256/243 9/8 9/8 256/243] 3))
+         :initial-index 0}]
+       (map all-permutations-for-base-permutation-2)
+       flatten
+       (map :scale)
+       remove-duplicates
+       #_(map (fn [intervals] (intervals->scale intervals)))
+       ))

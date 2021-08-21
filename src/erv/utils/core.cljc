@@ -32,6 +32,13 @@
 (defn coprime? [& ns]
   (->> ns (map (comp set prime-factors)) (apply set/intersection) empty?))
 
+(defn coprimes
+  ([n] (coprimes n n))
+  ([n limit]
+   (->> (range 1 limit)
+        (filter #(and (coprime? % n)
+                      (not= % n))))))
+
 (defn get-all-rotations [pattern]
   (mapv #(into [] (rotate pattern %))
         (range (count pattern))))
