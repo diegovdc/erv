@@ -77,9 +77,9 @@
                   (update-in [(mod* scale %2)] inc))
              scale
              perms)))
-         (map (fn [scale] {:scale scale
+         (map (fn [scale] {:generator-seq scale
                           :fourths (get-interval-sequence scale generator)}))
-         (#(conj % {:scale scale :fourths (get-interval-sequence scale generator)}))))
+         (#(conj % {:generator-seq scale :fourths (get-interval-sequence scale generator)}))))
   (marwa [1 2 2 1 2 2 2] 4))
 #_(clojure.pprint/pprint (marwa-seq))
 #_(clojure.pprint/pprint (marwa kalayan 3))
@@ -170,14 +170,14 @@
               range
               (->> (map (partial + initial-index))))]
       (reduce (fn [acc idx]
-                (let [prev-scale (:scale (last acc))
+                (let [prev-scale (:generator-seq (last acc))
                       scale  (permutate-range-fwd prev-scale idx (+ idx range-len))]
-                  (conj acc {:scale scale
+                  (conj acc {:generator-seq scale
                              :group-size range-len
                              :initial-index (inc idx)
                              }))
                 )
-              [{:scale scale
+              [{:generator-seq scale
                 :group-size range-len
                 :initial-index initial-index}]
               perms-start-indexes)))
@@ -189,14 +189,14 @@
               range
               (->> (map (partial + initial-index))))]
       (reduce (fn [acc idx]
-                (let [prev-scale (:scale (last acc))
+                (let [prev-scale (:generator-seq (last acc))
                       scale  (permutate-range-fwd prev-scale idx (+ idx range-len))]
-                  (conj acc {:scale scale
+                  (conj acc {:generator-seq scale
                              :group-size range-len
                              :initial-index (inc idx)
                              }))
                 )
-              [{:scale scale
+              [{:generator-seq scale
                 :group-size range-len
                 :initial-index initial-index}]
               perms-start-indexes)))
@@ -212,18 +212,18 @@
 
 
 (do
-  (defn all-sub-range-permutations [scales]
-    (mapcat (fn [{:keys [scale group-size initial-index]}]
-              (map #(assoc % :parent scale)
-                   (all-range-permutations scale (dec group-size)
+  (defn all-sub-range-permutations [generator-seqs]
+    (mapcat (fn [{:keys [generator-seq group-size initial-index]}]
+              (map #(assoc % :parent generator-seq)
+                   (all-range-permutations generator-seq (dec group-size)
                                            (inc initial-index))))
-            scales))
+            generator-seqs))
   (all-sub-range-permutations
-   [{:scale [5 9 5 9 7 7 7 7 7 9], :group-size 4, :initial-index 0}
-    {:scale [7 5 9 5 9 7 7 7 7 9], :group-size 4, :initial-index 1}
-    {:scale [7 7 5 9 5 9 7 7 7 9], :group-size 4, :initial-index 2}
-    {:scale [7 7 7 5 9 5 9 7 7 9], :group-size 4, :initial-index 3}
-    {:scale [7 7 7 7 5 9 5 9 7 9], :group-size 4, :initial-index 4}]))
+   [{:generator-seq [5 9 5 9 7 7 7 7 7 9], :group-size 4, :initial-index 0}
+    {:generator-seq [7 5 9 5 9 7 7 7 7 9], :group-size 4, :initial-index 1}
+    {:generator-seq [7 7 5 9 5 9 7 7 7 9], :group-size 4, :initial-index 2}
+    {:generator-seq [7 7 7 5 9 5 9 7 7 9], :group-size 4, :initial-index 3}
+    {:generator-seq [7 7 7 7 5 9 5 9 7 9], :group-size 4, :initial-index 4}]))
 
 
 (do
@@ -236,26 +236,26 @@
 (do
 
   (defn all-permutations-for-base-permutation
-    [{:keys [scale group-size initial-index]}]
-    (loop [perms [(all-range-permutations scale group-size initial-index)]]
+    [{:keys [generator-seq group-size initial-index]}]
+    (loop [perms [(all-range-permutations generator-seq group-size initial-index)]]
       (if (-> perms last first :group-size (> 1))
         (recur (conj perms (all-sub-range-permutations (last perms))))
         perms)))
   (all-permutations-for-base-permutation
-   {:group-size 4, :scale [5 9 5 9 7 7 7 7 7 9], :initial-index 0}))
+   {:group-size 4, :generator-seq [5 9 5 9 7 7 7 7 7 9], :initial-index 0}))
 
 
 ;;  These next two functions will use all-range-permutations-2 see comments on that function
 (defn all-sub-range-permutations-2 [scales]
-  (mapcat (fn [{:keys [scale group-size initial-index]}]
-            (map #(assoc % :parent scale)
-                 (all-range-permutations-2 scale (dec group-size)
+  (mapcat (fn [{:keys [generator-seq group-size initial-index]}]
+            (map #(assoc % :parent generator-seq)
+                 (all-range-permutations-2 generator-seq (dec group-size)
                                            (inc initial-index))))
           scales))
 
 (defn all-permutations-for-base-permutation-2
-  [{:keys [scale group-size initial-index]}]
-  (loop [perms [(all-range-permutations-2 scale group-size initial-index)]]
+  [{:keys [generator-seq group-size initial-index]}]
+  (loop [perms [(all-range-permutations-2 generator-seq group-size initial-index)]]
     (if (-> perms last first :group-size (> 1))
       (recur (conj perms (all-sub-range-permutations-2 (last perms))))
       perms)))
@@ -288,7 +288,7 @@
 
       (map (fn [total]
              {:group-size (* 2 total)
-              :scale
+              :generator-seq
               (into [] (flatten
                         [(repeat total group)
                          (repeat (- scale-len 1 (* 2 total)) G)
@@ -302,9 +302,10 @@
 (defn remove-duplicates [coll]
   (:coll (reduce (fn [{:keys [coll already-in] :as acc}
                      el]
-                   (if (already-in el) acc
-                       {:coll (conj coll el)
-                        :already-in (conj already-in el)}))
+                   (let [gen-seq (el :generator-seq)]
+                     (if (already-in gen-seq) acc
+                         {:coll (conj coll el)
+                          :already-in (conj already-in gen-seq)})))
                  {:coll [] :already-in #{}} coll)))
 
 (do
@@ -316,8 +317,8 @@
          (partition interval)
          (map (partial apply *))
          (take (count scale))))
-  (get-ratio-interval-sequence-2 [9/8 9/8 10/9 16/15 9/8 9/8 256/243] 3)
-  (get-ratio-interval-sequence-2 [32/27 9/8 135/128 4096/3645 9/8 135/128 16/15] 3))
+  (comment (get-ratio-interval-sequence-2 [9/8 9/8 10/9 16/15 9/8 9/8 256/243] 3)
+           (get-ratio-interval-sequence-2 [32/27 9/8 135/128 4096/3645 9/8 135/128 16/15] 3)))
 
 
 (comment
@@ -325,21 +326,21 @@
        (map all-permutations-for-base-permutation)
        flatten
        #_(map #(dissoc % :group-size :initial-index :parent))
-       (map :scale)
+       (map :generator-seq)
        remove-duplicates
        #_  clojure.pprint/pprint)
 
   (->> (base-permutations 7 5 6)
        (map all-permutations-for-base-permutation)
        flatten
-       (map :scale)
+       (map :generator-seq)
        remove-duplicates
        clojure.pprint/pprint)
 
   (->> (base-permutations 5 5 4)
        (map all-permutations-for-base-permutation)
        flatten
-       (map :scale)
+       (map :generator-seq)
        remove-duplicates
        #_   clojure.pprint/pprint)
 
@@ -363,30 +364,30 @@
 
 ;;; testing the permutation algorithm with some of the cases from the xen9mar.pdf
   (->> [{:group-size 2,
-         :scale (into []
+         :generator-seq (into []
                       (get-ratio-interval-sequence-2
                        [9/8 9/8 9/8 256/243 9/8 9/8 256/243] 3))
          :initial-index 0}]
        (map all-permutations-for-base-permutation-2)
        flatten
-       (map :scale)
+       (map :generator-seq)
        remove-duplicates
        (map (fn [intervals] (intervals->scale intervals)))
        )
 
   (->> [{:group-size 2,
-         :scale (into []
+         :generator-seq (into []
                       (get-ratio-interval-sequence-2
                        [10/9 9/8 9/8 16/15 10/9 9/8 16/15] 2))
          :initial-index 0}]
        (map all-permutations-for-base-permutation-2)
        flatten
-       (map :scale)
+       (map :generator-seq)
        remove-duplicates
        (map (fn [intervals] (intervals->scale intervals)))
        )
 
-  (->> [{:group-size 2, :scale
+  (->> [{:group-size 2, :generator-seq
          (into []
                (get-ratio-interval-sequence-2
                 [32/27 9/8 135/128 4096/3645 9/8 135/128 16/15] 3))
@@ -394,10 +395,10 @@
        (map all-permutations-for-base-permutation-2)
        flatten
        #_(map #(dissoc % :group-size :initial-index :parent))
-       (map :scale)
+       (map :generator-seq)
        remove-duplicates
        #_(remove #(not= (last %) 4/3))
-       #_(map (fn [intervals] {:fourths intervals :scale (intervals->scale intervals)}))
+       #_(map (fn [intervals] {:fourths intervals :generator-seq (intervals->scale intervals)}))
        ))
 
 
@@ -463,6 +464,47 @@
 (defn intervals->scale-2 [scale-size intervals]
   (degs->scale scale-size (interval-seq->degs scale-size intervals)))
 
+(do
+  (defn best-sequence?
+    "A sequence consisting of n generators (G) and a single closing (C) interval"
+    [sequence-freqs]
+    (let [two-keys? (= 2 (count (keys sequence-freqs)))
+          nG&1C? (contains? (set (vals sequence-freqs)) 1)]
+      (and two-keys? nG&1C?)))
+  (best-sequence? (frequencies '(7 7 7 7 7 6 7)))
+
+  (defn sequence-analysis [sequence]
+    (let [freqs (frequencies sequence)]
+      {:generator-freqs freqs
+       :best-sequence? (best-sequence? freqs)
+       :sorted-generators-by-high-freq (->> freqs
+                                            (sort-by second >)
+                                            (map first))}))
+  (sequence-analysis '(7 7 7 7 7 6 7)))
+
+(defn get-possible-generator-sequences
+  [scale]
+  (map (fn [generator]
+         (let [sequence (get-interval-sequence scale generator)]
+           (merge {:generator generator ;; in terms of # of notes in scale
+                   :sequence  sequence}
+                  (sequence-analysis sequence))))
+       (range 1 (count scale))))
+
+
+(defn mos-permutations [scale-size base-permutations]
+  (->> base-permutations
+       (map all-permutations-for-base-permutation)
+       flatten
+       #_(map :generator-seq) ;; generator list
+       remove-duplicates
+       (map (fn [data]
+              (assoc data :scale
+                     (intervals->scale-2 scale-size
+                                         (data :generator-seq))))) ;; scale list
+       #_(remove #(some zero? %))
+       ))
+
 #_(coprimes 13)
 (comment
   ;; APP Flow
@@ -470,7 +512,7 @@
   ;; user inputs scale
   #_(def scale [1 1 1 4 1 1 4])
   (def scale [2 2 2 3 2 2 3])
-  #_(def scale [1 2 2 1 2 2 2])
+  (def scale [1 2 2 1 2 2 2])
   (def scale-size (apply + scale))
   (-> scale-size)
   ;; system gives the user a set of interval sequences to choose
@@ -483,12 +525,12 @@
   ;; (7 7 7 7 7 7 10)
 
   (base-permutations (count scale) 7 8)
-
-  (->> (base-permutations (count scale) 7 8)
+  (mos-marwa (base-permutations (count scale) 5 6))
+  (->> (base-permutations (count scale) 5 6)
        (map all-permutations-for-base-permutation)
        flatten
-       (map :scale) ;; generator list
-       remove-duplicates
+       (map :generator-seq) ;; generator list
+     #_ #_  remove-duplicates
        (map #(intervals->scale-2 scale-size %)) ;; scale list
        #_(remove #(some zero? %))
        )
@@ -499,13 +541,13 @@
 ;;; testing the permutation algorithm with some of the cases from the xen9mar.pdf
   ;; Fig. 2
   (->> [{:group-size 2,
-         :scale (into []
+         :generator-seq (into []
                       (get-ratio-interval-sequence-2
                        [9/8 9/8 9/8 256/243 9/8 9/8 256/243] 3))
          :initial-index 0}]
        (map all-permutations-for-base-permutation-2)
        flatten
-       (map :scale)
+       (map :generator-seq)
        remove-duplicates
        #_(map (fn [intervals] (intervals->scale intervals)))
        ))

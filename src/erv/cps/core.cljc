@@ -353,7 +353,8 @@
           (-> type* first
               (str/split #" ")
               first (str/split #"\)")
-              (->> (map read-string))))]
+              (->> (map #?(:clj read-string
+                           :cljs js/Number)))))]
     (->> cps-data
          :subcps
          (mapv (juxt first (comp #(map :set %) :scale  second)))
