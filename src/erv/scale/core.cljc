@@ -1,21 +1,10 @@
 (ns erv.scale.core
-  #?@
-  (:clj
-   [(:require
-     [clojure.spec.alpha :as s]
-     [clojure.string :as str]
-     [erv.utils.conversions :refer [cps->name* ratio->cents]]
-     [erv.utils.core :refer [wrap-at interval]]
-     [erv.utils.sequencer :refer [play!]]
-     [table.core :as t]
-     [erv.cps.core :as cps])]
-   :cljs
-   [(:require
-     [clojure.spec.alpha :as s]
-     [erv.utils.sequencer :refer [play!]]
-     [clojure.string :as str]
-     [erv.utils.conversions :refer [cps->name* ratio->cents]]
-     [erv.utils.core :refer [wrap-at interval]])]))
+  (:require [clojure.spec.alpha :as s]
+            [erv.utils.sequencer :refer [play!]]
+            [clojure.string :as str]
+            [erv.utils.conversions :refer [cps->name* ratio->cents]]
+            [erv.utils.core :refer [wrap-at interval]]
+            #? (:clj [table.core :as t])))
 
 (s/def ::bounded-ratio number?)         ;; Used to be `ratio?` but changed to `number?` to support `edos`
 (s/def ::bounding-period number?)
