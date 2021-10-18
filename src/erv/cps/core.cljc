@@ -22,14 +22,14 @@
                     #(->> % (map count) (apply =))))
 (s/def ::sub-cps-set (s/coll-of ::cps :distinct true))
 
-(defn ->cps [size generators]
-  (if (> size (count generators))
+(defn ->cps [size factors]
+  (if (> size (count factors))
     #{#{}}
     (with-meta
-      (->> (combo/combinations (into [] generators) size)
+      (->> (combo/combinations (into [] factors) size)
            (map set)
            set)
-      {::type (str size ")" (count generators))})))
+      {::type (str size ")" (count factors))})))
 
 (comment
   ;; TODO, for stellating the hexany
@@ -66,18 +66,23 @@
   "Calculate all the ratios within the bounding-period (e.g. octave, tritave, etc.)
   `normalization-generator` a generator used to normalize the scale so that it
   has a first root at 1/1.
-  i.e. for a cps with generators [1 3 5 7] you can use either 3, 5, or 7"
+  i.e. for a cps with factors [1 3 5 7] you can use either 3, 5, or 7"
   ([bounding-period cps-map] (bound-ratio bounding-period 1 cps-map ))
   ([bounding-period normalization-generator cps-map]
    (->> cps-map
         (map (fn [node*]
                (let [ratio (/ (apply * (node* :set)) normalization-generator)]
-                 (assoc node*
-                        :ratio ratio
-                        :bounded-ratio (within-bounding-period
-                                        bounding-period
-                                        ratio)
-                        :bounding-period bounding-period)))))))
+                 (if bounding-period;; TODO test `nil` `bounding-period` with sub-cps
+                   (assoc node*
+                          :ratio ratio
+                          :bounded-ratio (within-bounding-period
+                                          bounding-period
+                                          ratio)
+                          :bounding-period bounding-period)
+                   (assoc node*
+                          :ratio ratio
+                          :bounded-ratio ratio
+                          :bounding-period nil ))))))))
 
 (defn add-edge
   "Adds to the set of edges of `node-from` the value `node-to`"
@@ -124,31 +129,33 @@
      :graphs {:full full-graph
               :simple (graph->simple-graph full-graph)}}))
 
-(defn +meta [size generators norm-gen data
-             & {:keys [type] :or {type (str size ")" (count generators))}}]
+(declare get-cps-description)
+(defn +meta [size factors norm-fac data
+             & {:keys [type] :or {type (str size ")" (count factors))}}]
   (merge {:meta {:scale :cps
-                 :size size
-                 :generators (sort (into [] generators))
                  :period (-> data :scale first :bounding-period)
-                 :normalized-by norm-gen
-                 ::type type}}
+                 :size (-> data :scale count)
+                 :cps/size size
+                 :cps/factors (sort (into [] factors))
+                 :cps/normalized-by norm-fac
+                 :cps/type type}}
          data))
 
 (defn filter-scale
-  "Get a subscale that only has degrees related to the `generators`.
-  `generators` must be a set."
-  [scale generators]
-  (filter #(-> % :set (set/intersection generators) not-empty)
+  "Get a subscale that only has degrees related to the `factors`.
+  `factors` must be a set."
+  [scale factors]
+  (filter #(-> % :set (set/intersection factors) not-empty)
           scale))
 
 (do
   ;; #dbg
   (defn find-subcps
-    [cps-set-size generators sub-cps-set-size subcps-generators-size]
-    (let [base-cps (->cps subcps-generators-size generators)
+    [cps-set-size factors sub-cps-set-size subcps-factors-size]
+    (let [base-cps (->cps subcps-factors-size factors)
           diff-set-size (Math/abs (- cps-set-size sub-cps-set-size))
-          gens-set (set generators)
-          meta* {::type (str sub-cps-set-size ")" subcps-generators-size " of " cps-set-size ")" (count generators))}]
+          gens-set (set factors)
+          meta* {::type (str sub-cps-set-size ")" subcps-factors-size " of " cps-set-size ")" (count factors))}]
       (->> base-cps (map
                      (fn [set*]
                        (let [diff (set/difference gens-set set*)
@@ -159,7 +166,8 @@
                           diffs))))
            (apply concat)
            set)))
-  (find-subcps 3 [1 3 5 7 11 13] 2 4))
+  (comment
+    (find-subcps 3 [1 3 5 7 11 13] 2 4)))
 
 (comment
   ;; For test
@@ -188,8 +196,8 @@
                (into {}))
           "5-1.3.7.9")))
 
-(defn- generators->str [generators]
-  (->> generators sort (str/join ".")))
+(defn- factors->str [factors]
+  (->> factors sort (str/join ".")))
 
 (defn get-cps-description [cps]
   {:pre [(validate ::cps cps)]}
@@ -198,12 +206,12 @@
     (str (::type (meta cps)) " "
          (cond
            (and (not-empty constants) (not-empty non-constants))
-           (str (generators->str constants) "-" (generators->str non-constants))
-           (not-empty constants) (generators->str constants)
-           (not-empty non-constants) (generators->str non-constants)
+           (str (factors->str constants) "-" (factors->str non-constants))
+           (not-empty constants) (factors->str constants)
+           (not-empty non-constants) (factors->str non-constants)
            :else ""))))
 
-(get-cps-description (->cps 2 [1 3 5 7]))
+(comment (get-cps-description (->cps 2 [1 3 5 7])))
 
 (defn subcps-sets->map [subcps-set]
   (->>  subcps-set
@@ -211,16 +219,16 @@
         (into {})))
 
 (do
-  (defn subcps-sets->data [period norm-gen subcps-set]
+  (defn subcps-sets->data [period norm-fac subcps-set]
     (->>  subcps-set
           (map (juxt get-cps-description
                      #(->> %
                            set->maps
-                           (bound-ratio period norm-gen)
+                           (bound-ratio period norm-fac)
                            (maps->data :bounded-ratio)
                            ((fn [data] (+meta (-> % first count)
                                              (set (apply concat %))
-                                             norm-gen
+                                             norm-fac
                                              data
                                              :type (::type (meta %))))))))
           (into {})))
@@ -231,12 +239,12 @@
   )
 
 (defn filter-subcps-map
-  ([subcps-map generators] (filter-subcps-map subcps-map generators false))
-  ([subcps-map generators match-all?]
-   (if (empty? generators)
+  ([subcps-map factors] (filter-subcps-map subcps-map factors false))
+  ([subcps-map factors match-all?]
+   (if (empty? factors)
      subcps-map
      (let [match-fn (if match-all? every? some)
-           search-fns (map #(fn [k] (str/includes? k (str %))) generators)
+           search-fns (map #(fn [k] (str/includes? k (str %))) factors)
            filtered-keys (filter (comp (partial match-fn true?)
                                        (apply juxt search-fns))
                                  (keys subcps-map))]
@@ -310,20 +318,23 @@
      (if sets (assoc sets set interval) '()))))
 
 (defn make
-  [size generators & {:keys [period norm-gen] :or {period 2 norm-gen 1}}]
-  (->> generators
+  [size factors & {:keys [period norm-fac] :or {period 2 norm-fac 1}}]
+  (->> factors
        (->cps size)
        set->maps
-       (bound-ratio period norm-gen)
+       (bound-ratio period norm-fac)
        (maps->data :bounded-ratio)
-       (+meta size generators norm-gen)))
+       (+meta size factors norm-fac)))
 
+(make 3 [1 3 5 7] :period 2)
 
-(defn +subcps [cps-data set-size generators-size]
-  (let [{:keys [size generators period normalized-by]} (:meta cps-data)]
+(defn +subcps [cps-data set-size factors-size]
+  (let [{:keys [cps/size cps/factors period cps/normalized-by]} (:meta cps-data)]
     (update cps-data :subcps merge
-            (->> (find-subcps size generators set-size generators-size)
+            (->> (find-subcps size factors set-size factors-size)
                  (subcps-sets->data period normalized-by)))))
+
+(comment (+subcps (make 2 [1 3 5 7] :period 2) 2 3 ))
 
 (defn get-possible-subcps-data
   "Get the cell-row data for all possible subcps -i.e an inverted pascal's traingle. Note the `cps-size` is the cell in the triangle
@@ -343,9 +354,14 @@
           cps-sizes))
 
 (defn +all-subcps [cps-data]
-  (let [{:keys [size generators]} (:meta cps-data)]
-    (->> (get-possible-subcps-data size (count generators))
+  (let [{:keys [cps/size cps/factors]} (:meta cps-data)]
+    (->> (get-possible-subcps-data size (count factors))
          (reduce #(+all-subcps-row %1 %2) cps-data))))
+
+(make 2 [1 3 5 7])
+(->> (make 2 [1 3 5 7])
+     +all-subcps
+     #_get-subcps-basic-data)
 
 (defn get-subcps-basic-data [cps-data]
   (let [parse-type-as-numbers
@@ -361,6 +377,7 @@
          (sort-by (juxt (comp second parse-type-as-numbers)
                         (comp first parse-type-as-numbers))))))
 (comment
+
   (=
    (->> (make 2 [1 3 5 7])
         +all-subcps
@@ -419,7 +436,31 @@
 
 
 (comment
-  (count (combo/combinations (range 6) 6)))
+  (count (combo/combinations (range 6) 6))
+  (->> (make 3 [6 7 8 9 10 11] :norm-fac (* 6 7 8) :period nil)
+       :scale
+       (map :ratio)
+       sort)
+  (sort  [1
+          98
+          5/4
+          9/7
+          11/8
+          10/7
+          3/2
+          11/7
+          45/28
+          5/3
+          99/56
+          11/6
+          15/8
+          55/28
+          33/16
+          15/7
+          55/24
+          33/14
+          55/21
+          165/56]))
 (comment
   (require
    '[user :refer [spy]]

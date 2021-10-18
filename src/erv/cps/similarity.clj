@@ -5,7 +5,8 @@
 
   Currently only hexanies are being calculated with respecto to 12-edo scales."
   (:require [erv.utils.conversions :as conv]
-            [erv.utils.core :as utils]))
+            [erv.utils.core :as utils]
+            [clojure.string :as str]))
 
 
 
@@ -78,8 +79,8 @@
 
 (+euclidean-distance {:cents '(0 204 316 519 702 1018)})
 (sort (map #(-> % (- 182) (mod 1200)) '(0 182 386 498 701 884) ))
-(defn +gens [generators cps]
-  (assoc cps :generators generators))
+(defn +gens [factors cps]
+  (assoc cps :factors factors))
 
 
 (comment
@@ -88,11 +89,11 @@
            '[clojure.java.io :as io]
            '[erv.utils.core :refer [round2]]
            '[erv.cps.core :as cps])
-
+  (count cps-sorted-by-euclidean-distance)
   (def cps-sorted-by-euclidean-distance
-    (-> (range 1 100 2)
-        (combo/combinations 4)
-        (->> (pmap #(->> (cps/->cps 2 %)
+    (-> (range 1 31 2)
+        (combo/combinations 7)
+        (->> (pmap #(->> (cps/->cps 3 %)
                          cps/set->maps
                          (cps/bound-ratio 2)
                          (cps/maps->data :bounded-ratio)
@@ -100,25 +101,29 @@
                          +cents
                          +euclidean-distance))
              (sort-by :euclidean-distance))))
-
+  (->> cps-sorted-by-euclidean-distance
+       (map (juxt (comp #(str "Factors: " %) vec :factors)
+                  (comp #(str "Cents:" (str/join "," %)) :cents)
+                  (comp #(str "Distance: " %) :euclidean-distance)))
+       (take 10))
   (def cps-sorted-by-euclidean-distance-up-to-53
     (->> cps-sorted-by-euclidean-distance
-         (filter #(<= (apply max (:generators %)) 53))))
+         (filter #(<= (apply max (:factors %)) 53))))
 
   (def cps-sorted-by-euclidean-distance-up-to-23
     (->> cps-sorted-by-euclidean-distance
-         (filter #(<= (apply max (:generators %)) 23))))
+         (filter #(<= (apply max (:factors %)) 23))))
 
-  (with-open [writer (io/writer "hexany-similarity-to-12edo-scales-up-to-23.csv")]
+  (with-open [writer (io/writer "3oo7-similarity-to-12edo-scales-up-to-23.csv")]
     (csv/write-csv writer
                    (->> #_cps-sorted-by-euclidean-distance
                         #_cps-sorted-by-euclidean-distance-up-to-53
                         cps-sorted-by-euclidean-distance-up-to-23
-                        (mapv (juxt :generators :mode :cents :closest-12-edo :euclidean-distance ))
+                        (mapv (juxt :factors :mode :cents :closest-12-edo :euclidean-distance ))
                         (mapv (fn [data]
                                 (mapv #(cond
                                          (= java.lang.Long (type %)) %
                                          (= java.lang.Double (type %)) (round2 3 %)
                                          :else (str/join " " %))
                                       data)))
-                        (into [["Generators" "Mode" "Cents" "Closest 12 edo scale" "Euclidean Distance"]])))))
+                        (into [["Factors" "Mode" "Cents" "Closest 12 edo scale" "Euclidean Distance"]])))))
