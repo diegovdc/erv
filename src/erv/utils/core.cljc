@@ -21,6 +21,14 @@
         off (mod (+ (mod n l) l) l)]
     (concat (drop off a) (take off a))))
 
+(defn get-all-rotations [pattern]
+  (mapv #(into [] (rotate pattern %))
+        (range (count pattern))))
+
+(defn factors [n]
+  (filter #(= 0 (rem n %)) (range 2 n)))
+
+
 (defn prime-factors [n]
   (loop [n n divisor 2 factors []]
     (if (< n 2)
@@ -38,9 +46,5 @@
    (->> (range 1 limit)
         (filter #(and (coprime? % n)
                       (not= % n))))))
-
-(defn get-all-rotations [pattern]
-  (mapv #(into [] (rotate pattern %))
-        (range (count pattern))))
 
 (defn interval [ratio-a ratio-b] (/ ratio-b ratio-a))

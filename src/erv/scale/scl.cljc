@@ -48,15 +48,17 @@
 (def made-with "Made with the \"erv\" library: https://github.com/diegovdc/erv")
 
 (defn get-cps-meta-description [scale-data]
-  (let [{:keys [size period generators]} (:meta scale-data)]
+  (let [{:keys [period]} (:meta scale-data)
+        size (:cps/size (:meta scale-data))
+        factors (:cps/factors (:meta scale-data))]
     {:name (format "cps-%s_%s-%s_p%s.scl"
                    size
-                   (count generators)
-                   (str/join "_" generators)
+                   (count factors)
+                   (str/join "_" factors)
                    period)
-     :description (format "A %s CPS scale with generators {%s} and period %s. %s"
-                          (str size ")" (count generators))
-                          (str/join ", " generators)
+     :description (format "A %s CPS scale with factors {%s} and period %s. %s"
+                          (str size ")" (count factors))
+                          (str/join ", " factors)
                           period
                           made-with)}))
 

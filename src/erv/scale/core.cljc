@@ -1,10 +1,22 @@
 (ns erv.scale.core
-  (:require [clojure.spec.alpha :as s]
-            [erv.utils.sequencer :refer [play!]]
-            [clojure.string :as str]
-            [erv.utils.conversions :refer [cps->name* ratio->cents]]
-            [erv.utils.core :refer [wrap-at interval]]
-            #? (:clj [table.core :as t])))
+  #?@
+   (:clj
+    [(:require
+      [clojure.spec.alpha :as s]
+      [clojure.string :as str]
+      [erv.utils.conversions :refer [cps->name* ratio->cents]]
+      [erv.utils.core :refer [interval wrap-at]]
+      [erv.utils.sequencer :refer [play!]]
+      [table.core :as t]
+      [taoensso.timbre :as timbre])]
+    :cljs
+    [(:require
+      [clojure.spec.alpha :as s]
+      [clojure.string :as str]
+      [erv.utils.conversions :refer [cps->name* ratio->cents]]
+      [erv.utils.core :refer [interval wrap-at]]
+      [erv.utils.sequencer :refer [play!]]
+      [taoensso.timbre :as timbre])]))
 
 (s/def ::bounded-ratio number?)         ;; Used to be `ratio?` but changed to `number?` to support `edos`
 (s/def ::bounding-period number?)
@@ -21,8 +33,11 @@
          (repeat (Math/abs (double scale-period)) bounding-period)))
 
 (defn get-period [transp-period scale-len degree]
-  (let [transp-period* (if (> 0 degree) (- transp-period 1) transp-period)]
-    (+ transp-period* (quot degree scale-len))))
+  (let [transp-period* (if (> 0 degree) (- transp-period 1) transp-period)
+        ;; prevent the zeroth degree to be counted as the start of lower octave
+        ;; else our tranposition algorithm will overtranspose this degree
+        degree* (if (> 0 degree) (inc degree) degree)]
+    (+ transp-period* (quot degree* scale-len))))
 
 (defn deg->freq
   "Given a `scale` as spec'd above, a `base-freq` and a `degree`,
@@ -37,13 +52,15 @@
   For convenience the `:period` key can be used to transpose the resulting
   frequency, i.e 1 will play the degree one `period` above."
   [scale base-freq degree
-   & {:keys [period] :or {period 0}}]
+   & {:keys [period debug-fn] :or {period 0}}]
   #_{:pre [(validate ::scale scale)]}
   (let [scale-len (count scale)
         period* (get-period period scale-len degree)
         degree* (mod degree scale-len)
-        {:keys [bounded-ratio bounding-period]} (nth scale degree*)
+        note (nth scale degree*)
+        {:keys [bounded-ratio bounding-period]} note
         period-transp (transpose-by bounding-period period*)]
+    (when debug-fn (timbre/info (debug-fn note)))
     (* period-transp bounded-ratio base-freq)))
 
 (defn intervals->degs [base-deg intervals]
