@@ -190,7 +190,7 @@
 (comment
   ;;  WIP: exploring if all unique submos have a rotation that aligns to the
   ;;   zeroth index of the mos.
-  (make-all-submos [3 2 3 2 2] 5)
+  (make-all-submos [1 2 2 1 2 2 2] 5)
   (->> (make-all-submos [1, 1, 4, 1, 4, 1, 1, 4, 1, 4, 1, 4] 11)
        (map (fn [mos-data]
               (->> mos-data :submos-by-mos
