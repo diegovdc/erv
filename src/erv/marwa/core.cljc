@@ -1,7 +1,7 @@
 (ns erv.marwa.core
   (:require [clojure.string :as str]
             [erv.mos.mos :as mos]
-            [erv.utils.core :refer [coprimes]]))
+            [erv.utils.core :as utils :refer [coprimes]]))
 
 ;; cf. pg 3 of  http://anaphoria.com/xen9mar.pdf
 
@@ -32,7 +32,8 @@
          (partition interval)
          (map (partial apply +))
          (take (count scale))))         ; only take the intervals before the cycle repeats
-  (get-interval-sequence [1 1 1 4 1 1 4] 2))
+  (get-interval-sequence [1 1 1 4 1 1 4] 2)
+  (get-interval-sequence '(5 4 5 4 1 8 4) 1))
 
 
 
@@ -297,16 +298,20 @@
            (range 1 max-groups))))
   #_(base-permutations 10 7 9))
 (base-permutations 5 5 4)
-(base-permutations 5 5 4)
 
-(defn remove-duplicates [coll]
-  (:coll (reduce (fn [{:keys [coll already-in] :as acc}
-                     el]
-                   (let [gen-seq (el :generator-seq)]
-                     (if (already-in gen-seq) acc
-                         {:coll (conj coll el)
-                          :already-in (conj already-in gen-seq)})))
-                 {:coll [] :already-in #{}} coll)))
+(do
+  (defn remove-duplicates [coll]
+    (:coll (reduce
+            (fn [{:keys [coll already-in] :as acc}
+                el]
+              (let [gen-seq (el :generator-seq)]
+                (if (already-in gen-seq) acc
+                    {:coll (conj coll el)
+                     :already-in (into already-in
+                                       (utils/get-all-rotations gen-seq))})))
+            {:coll [] :already-in #{}} coll))))
+
+
 
 (do
   (defn get-ratio-interval-sequence-2
@@ -365,8 +370,8 @@
 ;;; testing the permutation algorithm with some of the cases from the xen9mar.pdf
   (->> [{:group-size 2,
          :generator-seq (into []
-                      (get-ratio-interval-sequence-2
-                       [9/8 9/8 9/8 256/243 9/8 9/8 256/243] 3))
+                              (get-ratio-interval-sequence-2
+                               [9/8 9/8 9/8 256/243 9/8 9/8 256/243] 3))
          :initial-index 0}]
        (map all-permutations-for-base-permutation-2)
        flatten
@@ -377,8 +382,8 @@
 
   (->> [{:group-size 2,
          :generator-seq (into []
-                      (get-ratio-interval-sequence-2
-                       [10/9 9/8 9/8 16/15 10/9 9/8 16/15] 2))
+                              (get-ratio-interval-sequence-2
+                               [10/9 9/8 9/8 16/15 10/9 9/8 16/15] 2))
          :initial-index 0}]
        (map all-permutations-for-base-permutation-2)
        flatten
@@ -450,6 +455,11 @@
   (defn degs->scale [scale-size degs]
     (->> (conj degs scale-size) sort (partition 2 1) (map (fn [[a b]] (- b a))))))
 
+(->> (get-interval-sequence [3 2 3 2 2] 4)
+     (interval-seq->degs 12)
+     (degs->scale 12)
+     )
+
 
 (degs->scale 12 (interval-seq->degs 12 [6 5 4 6 4 6 5]))
 
@@ -463,7 +473,7 @@
 (degs->scale 13 (interval-seq->degs 13 '(7 7 7 7 7 7 10)))
 (defn intervals->scale-2 [scale-size intervals]
   (degs->scale scale-size (interval-seq->degs scale-size intervals)))
-
+#_(intervals->scale-2 12 [3 2 3 2 2])
 (do
   (defn best-sequence?
     "A sequence consisting of n generators (G) and a single closing (C) interval"
@@ -525,12 +535,12 @@
   ;; (7 7 7 7 7 7 10)
 
   (base-permutations (count scale) 7 8)
-  (mos-marwa (base-permutations (count scale) 5 6))
+  (mos-permutations (count scale) (base-permutations (count scale) 5 6))
   (->> (base-permutations (count scale) 5 6)
        (map all-permutations-for-base-permutation)
        flatten
        (map :generator-seq) ;; generator list
-     #_ #_  remove-duplicates
+       #_ #_  remove-duplicates
        (map #(intervals->scale-2 scale-size %)) ;; scale list
        #_(remove #(some zero? %))
        )
@@ -538,12 +548,67 @@
   )
 
 (comment
+  ;; TODO permutations for submos
+  (base-permutations 5 3 2)
+  (do
+    (defn manual-base-permutations [scale generator]
+      (let [generator-seq (vec (get-interval-sequence scale generator))
+            base-perms [{:group-size 2
+                         :generator-seq generator-seq
+                         :initial-index 0}]]
+        base-perms
+        (->> base-perms
+             (map all-permutations-for-base-permutation)
+             flatten
+             ;; generator list
+             remove-duplicates
+             (map :generator-seq)
+             (map #(intervals->scale-2 12 %)) ;; scale list
+             #_(remove #(some zero? %)))))
+    (manual-base-permutations [2 2 1 2 2 2 1] 2))
+
+
+  (->> [{:group-size 2
+         ;; from 2 2 1 2 2 2 1
+         ;; generator 2 gives
+         ;; Generator List [4 3 4 3 3 4 3]
+         ;; rotate by -3  [3 3 4 3 4 3 4]
+         ;; make the 2nd 3 a 4 (closing interval) so: [2 4 4 3 4 3 4]
+         :generator-seq [2 4 4 3 4 3 4]
+         :initial-index 0}]
+       (map all-permutations-for-base-permutation)
+       flatten
+       ;; generator list
+       remove-duplicates
+       (map :generator-seq)
+       (map #(intervals->scale-2 12 %)) ;; scale list
+       #_(remove #(some zero? %)))
+
+  ;; if
+  ;;    7 7 7 7 7 7 8 ->
+  ;;    6 8 7 7 7 7 8
+  ;; then
+  ;;    5 3 4 5 3 4 ->
+  ;;    4 4 4 5 3 4
+  ;; and
+  ;;    8  9 7 8 9 7 ->
+  ;;    10 7 7 8 9 7
+  ;; and
+  ;;    20 18 18 17 18 18 15 ->
+  ;;    23 15 18 17 18 18 15
+  (let [scale [7,4,5,4,5,4,2]]
+    (map (fn [generator]
+           [generator
+            (get-interval-sequence scale generator)])
+         (range 1 (count scale)))))
+
+(comment
 ;;; testing the permutation algorithm with some of the cases from the xen9mar.pdf
   ;; Fig. 2
   (->> [{:group-size 2,
          :generator-seq (into []
-                      (get-ratio-interval-sequence-2
-                       [9/8 9/8 9/8 256/243 9/8 9/8 256/243] 3))
+                              (get-ratio-interval-sequence-2
+                               [9/8 9/8 9/8 256/243 9/8 9/8 256/243] 3))
          :initial-index 0}]
        (map all-permutations-for-base-permutation-2)
        flatten
