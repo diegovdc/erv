@@ -99,7 +99,7 @@
 
 (comment
   (require '[erv.cps.core :as cps])
-  (cps/make 2 [1 3 5 7] :norm-gen 7)
+  (cps/make 2 [1 3 5 7] :norm-fac 7)
   (get-cps-meta-description (cps/make 2 [1 3 5 7]))
-  (format-scale-for-scl (:scale (cps/make 2 [1 3 5 7] :norm-gen 35)))
+  (format-scale-for-scl (:scale (cps/make 2 [1 3 5 7] :norm-fac 35)))
   (spit "/home/diego/Desktop/dekany-1-5-7-13-23_p2.scl" (:content (make-scl-file (cps/make 2 [1 5 7 13 23] :norm-gen 115/64)))))
