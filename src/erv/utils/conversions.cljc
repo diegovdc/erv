@@ -4,6 +4,9 @@
 (defn ratio->cents [ratio]
   (-> (Math/log ratio) (/ (Math/log 2)) (* 1200)))
 
+(defn cents->ratio [cents]
+  (-> (/ cents 1200) (* (Math/log 2)) Math/exp))
+
 (defn cps->midi [cps]
   (-> (/ cps 220)
       Math/log
