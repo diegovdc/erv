@@ -359,9 +359,10 @@
          (reduce #(+all-subcps-row %1 %2) cps-data))))
 
 (make 2 [1 3 5 7])
-(->> (make 2 [1 3 5 7])
-     +all-subcps
-     #_get-subcps-basic-data)
+(-> (make 3 [1 3 5 7 9 11])
+    (+subcps 2 4)
+     :subcps
+    #_get-subcps-basic-data)
 
 (defn get-subcps-basic-data [cps-data]
   (let [parse-type-as-numbers
@@ -415,10 +416,14 @@
     ["2)3 of 2)4 1.3.7" '(#{7 3} #{1 3} #{7 1})]
     ["2)3 of 2)4 3.5.7" '(#{7 5} #{7 3} #{3 5})]]))
 
-
-
+(defn intersect
+  "Get the scale that intersects two cps"
+  [cps-1 cps-2]
+  (let [set* (->> cps-2 :scale (map :set) set)]
+    (->> cps-1 :scale (filter (fn [note] (set* (note :set)))))))
 
 (comment
+  (make 3 [1 3 5 7 11 13])
   (-> (make 3 [1 3 5 7 11 13])
       (+subcps 3 4)
       :subcps
