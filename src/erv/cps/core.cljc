@@ -468,10 +468,10 @@
           165/56]))
 (comment
   (require
-   '[user :refer [spy]]
+
    '[clojure.test :refer [deftest testing is run-tests]]
    '[erv.utils.conversions :as conv]
    '[erv.scale.core :as scale])
-  (scale/print-scale-intervals! (:nodes (make 2 [3 5 7 11]))
+  (scale/print-scale-intervals! (:nodes (make 2 [1 3 5 7]))
                                 :unit :ratios
                                 :ratio-type :ratio))

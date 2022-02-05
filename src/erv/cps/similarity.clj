@@ -42,6 +42,7 @@
                       813.6862861351651
                       933.1290943962624))
 
+
 (defn +cents [cps]
   (assoc cps :cents (->> cps
                          :scale
@@ -49,11 +50,15 @@
                          (map conv/ratio->cents)
                          root-to-0
                          (map int))))
+
 (defn rotate-scale [scale-cents n]
   (let [scale* (utils/rotate scale-cents n)]
     (sort (map #(-> % (- (first scale*)) (mod 1200)) scale*))))
 (let [scale '(0 182 386 498 701 884)]
   (map (partial rotate-scale scale) (range (count scale))))
+
+(euclidean-distance [32 102 140]
+                    [100 300 400 800 1000 1100])
 
 (defn +euclidean-distance* [cps]
   (let [closest-12-edo (twelvulate (:cents cps))]
@@ -85,7 +90,7 @@
 
 (comment
   (require '[clojure.math.combinatorics :as combo]
-           '[clojure.data.csv :as csv]
+           ;; '[clojure.data.csv :as csv]
            '[clojure.java.io :as io]
            '[erv.utils.core :refer [round2]]
            '[erv.cps.core :as cps])

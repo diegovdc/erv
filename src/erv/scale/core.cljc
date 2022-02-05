@@ -1,22 +1,23 @@
 (ns erv.scale.core
   #?@
-   (:clj
-    [(:require
-      [clojure.spec.alpha :as s]
-      [clojure.string :as str]
-      [erv.utils.conversions :refer [cps->name* ratio->cents]]
-      [erv.utils.core :refer [interval wrap-at]]
-      [erv.utils.sequencer :refer [play!]]
-      [table.core :as t]
-      [taoensso.timbre :as timbre])]
-    :cljs
-    [(:require
-      [clojure.spec.alpha :as s]
-      [clojure.string :as str]
-      [erv.utils.conversions :refer [cps->name* ratio->cents]]
-      [erv.utils.core :refer [interval wrap-at]]
-      [erv.utils.sequencer :refer [play!]]
-      [taoensso.timbre :as timbre])]))
+  (:clj
+   [(:require
+     [clojure.spec.alpha :as s]
+     [clojure.string :as str]
+     [erv.cps.core :as cps]
+     [erv.utils.conversions :refer [cps->name* ratio->cents]]
+     [erv.utils.core :refer [interval wrap-at]]
+     [erv.utils.sequencer :refer [play!]]
+     [table.core :as t]
+     [taoensso.timbre :as timbre])]
+   :cljs
+   [(:require
+     [clojure.spec.alpha :as s]
+     [clojure.string :as str]
+     [erv.utils.conversions :refer [cps->name* ratio->cents]]
+     [erv.utils.core :refer [interval wrap-at]]
+     [erv.utils.sequencer :refer [play!]]
+     [taoensso.timbre :as timbre])]))
 
 (s/def ::bounded-ratio number?)         ;; Used to be `ratio?` but changed to `number?` to support `edos`
 (s/def ::bounding-period number?)
@@ -27,7 +28,7 @@
 (defn- get-transp-fn [scale-period]
   (if (>= scale-period 0) * /))
 
-(defn- transpose-by [bounding-period scale-period]
+(defn transpose-by [bounding-period scale-period]
   (apply (get-transp-fn scale-period)
          1 ;; important when transp-fn is division
          (repeat (Math/abs (double scale-period)) bounding-period)))
@@ -68,6 +69,27 @@
           [base-deg]
           intervals))
 
+(defn interval->ratio
+  "Get the ratio between two degrees in a scale"
+  [scale origin-deg target-deg]
+  (let [scale-len (count scale)
+        bounding-period (:bounding-period (first scale))
+        origin (:bounded-ratio (wrap-at origin-deg scale))
+        target (:bounded-ratio (wrap-at target-deg scale))
+        period* (get-period 0 scale-len (- target-deg origin-deg))
+        period-transp (transpose-by bounding-period period*)]
+    (* period-transp (interval origin target))))
+
+(comment
+  (require '[erv.cps.core :as cps])
+  (:scale (cps/make 2 [1 3 5 7]))
+  (interval->ratio (:scale (cps/make 2 [1 3 5 7])) 2 4)
+  (interval->ratio (:scale (cps/make 2 [1 3 5 7])) 2 10)
+  (interval->ratio (:scale (cps/make 2 [1 3 5 7])) 2 8)
+  (interval->ratio (:scale (cps/make 2 [1 3 5 7])) 2 14)
+  (interval->ratio (:scale (cps/make 2 [1 3 5 7])) 8 2)
+  (interval->ratio (:scale (cps/make 2 [1 3 5 7])) 8 -4))
+
 (defn stateful-interval->degree
   "Returns a statennful function that takes an interval and returns a degree based
   on the previous calculated degree.
@@ -78,6 +100,28 @@
    (let [prev-degree (atom (int base-degree))]
      (fn [interval]
        (swap! prev-degree + (int interval))))))
+
+(defn- pitch-name->pitch-class [name*]
+  (let [op (if (str/includes? name* "+") "+" "-")]
+    (-> name* (str/split (re-pattern (str "\\" op)))
+        (update 0 (comp first #(str/split % #"\d")))
+        (->> (str/join op)))))
+(comment (pitch-name->pitch-class "G#5+45")
+         (pitch-name->pitch-class "G#5"))
+
+(defn +names
+  "Add the note names to a scale"
+  [base-freq scale]
+  (map-indexed
+   (fn [idx note-data]
+     (assoc note-data
+             :pitch
+             (let [freq (deg->freq scale base-freq idx)
+                   name* (cps->name* freq)]
+               {:name name*
+                :class (pitch-name->pitch-class name*)
+                :base-freq base-freq})))
+   scale))
 
 (defn demo-scale*
   "Creates a list of frequencies that run up and/or down a scale by the specified
@@ -97,6 +141,7 @@
                     :down-up (concat (reverse degrees) (rest degrees))
                     #_:up-down (concat degrees (rest (reverse degrees))))]
      (map #(deg->freq scale base-freq %) degrees*))))
+
 
 (defn demo!
   [scale &
@@ -129,7 +174,6 @@
 
     ))
 
-
 (do
   (defn print-scale-intervals!
     [scale
@@ -149,7 +193,8 @@
                                      (map (fn [r2] (conversor (interval r r2))) ratios))
                                    ratios))))]
       #?(:clj (t/table data)
-         :cljs (js/console.table data))))
+         :cljs (js/console.table data))
+      data))
   )
 
 (comment
