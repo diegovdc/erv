@@ -1,18 +1,19 @@
 (ns erv.scale.scl
   "The purpose of this namespace is to produce scala files."
   #?@
-   (:clj
-    [(:require
-      [clojure.spec.alpha :as spec]
-      [clojure.string :as str]
-      [erv.utils.conversions :as conv])]
-    :cljs
-    [(:require
-      [clojure.spec.alpha :as spec]
-      [clojure.string :as str]
-      [erv.utils.conversions :as conv]
-      [goog.string :refer [format]]
-      goog.string.format)]))
+  (:clj
+   [(:require
+     [clojure.spec.alpha :as spec]
+     [clojure.string :as str]
+     [erv.utils.conversions :as conv]
+     [erv.meru.core :as meru])]
+   :cljs
+   [(:require
+     [clojure.spec.alpha :as spec]
+     [clojure.string :as str]
+     [erv.utils.conversions :as conv]
+     [goog.string :refer [format]]
+     goog.string.format)]))
 
 (comment
   "
@@ -36,7 +37,7 @@
 
 ")
 
-(spec/def :meta/scale #{:cps})
+(spec/def :meta/scale #{:cps :meru})
 (spec/def ::meta (spec/keys :req-un [:meta/scale]))
 (comment (spec/explain ::meta (:meta (cps/make 2 [1 3 5 7]))))
 
@@ -62,9 +63,23 @@
                           period
                           made-with)}))
 
+(defn get-meru-meta-description [scale-data]
+  (let [{:keys [period]} (:meta scale-data)
+        {:keys [size seed total-triads]} (:meta scale-data)]
+    {:name (format "meru-%s_seed_%s_triads_%s_p%s.scl"
+                   size
+                   (str/join "-" seed)
+                   total-triads
+                   period)
+     :description (format "A meru scale of size: %s and  period %s. %s"
+                          size
+                          period
+                          made-with)}))
+
 (defn get-description-data [scale-data]
   (case (-> scale-data :meta :scale)
     :cps (get-cps-meta-description scale-data)
+    :meru (get-meru-meta-description scale-data)
     {:name "unkown.scl" :description ""}))
 
 (defn format-ratio [ratio]
@@ -98,8 +113,17 @@
      :content (format "! %s\n!\n%s\n %s\n!\n%s" name description size pitches)}))
 
 (comment
-  (require '[erv.cps.core :as cps])
+  (require '[erv.cps.core :as cps]
+           '[erv.meru.core :as meru])
   (cps/make 2 [1 3 5 7] :norm-fac 7)
+  (count meru/test1)
+  (nth meru/test1 )
   (get-cps-meta-description (cps/make 2 [1 3 5 7]))
-  (format-scale-for-scl (:scale (cps/make 2 [1 3 5 7] :norm-fac 35)))
+  (first meru/test1)
+  (format-scale-for-scl (:scale (first meru/test1)))
+  (let [index 9
+        scl (make-scl-file (first meru/test1) #_(nth meru/test1 index))]
+    (spit
+     (str "/Users/diego/Music/tunings/"  "22t-" (:filename scl))
+     (:content scl)))
   (spit "/home/diego/Desktop/dekany-1-5-7-13-23_p2.scl" (:content (make-scl-file (cps/make 2 [1 5 7 13 23] :norm-gen 115/64)))))

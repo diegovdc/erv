@@ -15,3 +15,4 @@ pom.xml.asc
 **/.#*
 /native
 src/archive/huygens-fokker-scala-archive/*.scl
+.clj-kondo/
