@@ -23,11 +23,10 @@
 (s/def ::degree (s/keys :req-un [::bounded-ratio ::bounding-period]))
 (s/def ::scale (s/and not-empty (s/* ::degree)))
 
-
 (defn- get-transp-fn [scale-period]
   (if (>= scale-period 0) * /))
 
-(defn- transpose-by [bounding-period scale-period]
+(defn transpose-by [bounding-period scale-period]
   (apply (get-transp-fn scale-period)
          1 ;; important when transp-fn is division
          (repeat (Math/abs (double scale-period)) bounding-period)))
@@ -79,6 +78,29 @@
      (fn [interval]
        (swap! prev-degree + (int interval))))))
 
+(defn- pitch-name->pitch-class [name*]
+  (let [op (if (str/includes? name* "+") "+" "-")]
+    (-> name* (str/split (re-pattern (str "\\" op)))
+        (update 0 (comp first #(str/split % #"\d")))
+        (->> (str/join op)))))
+
+(comment (pitch-name->pitch-class "G#5+45")
+         (pitch-name->pitch-class "G#5"))
+
+(defn +names
+  "Add the note names to a scale"
+  [base-freq scale]
+  (map-indexed
+   (fn [idx note-data]
+     (assoc note-data
+            :pitch
+            (let [freq (deg->freq scale base-freq idx)
+                  name* (cps->name* freq)]
+              {:name name*
+               :class (pitch-name->pitch-class name*)
+               :base-freq base-freq})))
+   scale))
+
 (defn demo-scale*
   "Creates a list of frequencies that run up and/or down a scale by the specified
   number of periods"
@@ -106,13 +128,12 @@
          note-dur #?(:clj 300 :cljs 0.5)
          direction :up-down
          on-event (fn [i freq] (-> (wrap-at i scale)
-                                  (dissoc :bounding-period :bounded-ratio)
-                                  (assoc :note (cps->name* freq))
-                                  println))}}]
+                                   (dissoc :bounding-period :bounded-ratio)
+                                   (assoc :note (cps->name* freq))
+                                   println))}}]
   (play! (demo-scale* scale periods base-freq direction)
          note-dur
          :on-event on-event))
-
 
 (comment
   (require '[erv.utils.conversions :refer [ratio->cents cps->midi midi->cps]]
@@ -125,10 +146,7 @@
   (let [freqs (map #(cps->midi (deg->freq scale 10 %)) (range (count scale)))]
     (str "[" (->> (map #(- % (first freqs)) freqs)
                   (str/join ", "))
-         "]")
-
-    ))
-
+         "]")))
 
 (do
   (defn print-scale-intervals!
@@ -136,21 +154,19 @@
      & {:keys [unit ratio-type]
         :or {unit :cents ;; #{:cents :ratios}
              ratio-type :bounded-ratio ;; #{:bounded-ratio :ratio}
-             }}
-     ]
+             }}]
     (let [conversor (case unit
                       :ratios identity
                       (comp int ratio->cents))
           data (let [ratios (->> scale (map ratio-type))]
                  (map (fn [a b] (concat [a] b))
                       (concat ["ratio"] ratios)
-                      (concat [ratios]
+                      (concat [(map #(str "  " % "  ") ratios)]
                               (map (fn [r]
-                                     (map (fn [r2] (conversor (interval r r2))) ratios))
+                                     (map (fn [r2]  (conversor (interval r r2))) ratios))
                                    ratios))))]
       #?(:clj (t/table data)
-         :cljs (js/console.table data))))
-  )
+         :cljs (js/console.table data)))))
 
 (comment
   (require '[erv.cps.core :as cps])

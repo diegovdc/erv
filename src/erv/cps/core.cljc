@@ -1,12 +1,17 @@
 (ns erv.cps.core
+  ;;  TODO use https://github.com/Engelberg/ubergraph for the graphs
   (:require
    [clojure.math.combinatorics :as combo]
    [clojure.set :as set]
    [clojure.spec.alpha :as s]
    [clojure.string :as str]
    [clojure.walk :as walk]
-   [erv.utils.core :refer [interval validate]]))
+   [erv.utils.core :refer [interval validate]]
+   #? (:cljs [goog.string :as gstr])
+   #? (:cljs [goog.string.format])))
 
+#?(:cljs
+   (def format gstr/format))
 
 (comment
   ;; data prototype
@@ -22,6 +27,9 @@
                     #(->> % (map count) (apply =))))
 (s/def ::sub-cps-set (s/coll-of ::cps :distinct true))
 
+(defn- num->kw [n]
+  (-> (char (+ 65 n)) str str/lower-case keyword))
+
 (defn ->cps [size factors]
   (if (> size (count factors))
     #{#{}}
@@ -29,7 +37,11 @@
       (->> (combo/combinations (into [] factors) size)
            (map set)
            set)
-      {::type (str size ")" (count factors))})))
+      {::type (str size ")" (count factors))
+       ::archi-factors (->> factors
+                            sort
+                            (map-indexed (fn [i fac] {fac (num->kw i)}))
+                            (into {}))})))
 
 (comment
   ;; TODO, for stellating the hexany
@@ -38,14 +50,15 @@
              (let [gens [1 2 3 4]]
                (->> (combo/combinations gens 3)
                     (map (fn [c] (let [diff (set/difference (set gens) (set c))]
-                                  (set/union c (map #(/ 1 %) diff)))))
+                                   (set/union c (set (map #(/ 1 %) diff))))))
                     (map set)
                     set))))
-
 (defn set->maps
   "Creates a hexany-map"
   [cps-set]
-  (map (fn [pair] {:set pair}) cps-set))
+  (let [archi-factors (::archi-factors (meta cps-set) (fn [_]))]
+    (map (fn [pair] {:set pair
+                     :archi-set (set (map archi-factors pair))}) cps-set)))
 
 (defn within-bounding-period
   "Transposes a ratio withing a bounding-period.
@@ -67,7 +80,7 @@
   `normalization-generator` a generator used to normalize the scale so that it
   has a first root at 1/1.
   i.e. for a cps with factors [1 3 5 7] you can use either 3, 5, or 7"
-  ([bounding-period cps-map] (bound-ratio bounding-period 1 cps-map ))
+  ([bounding-period cps-map] (bound-ratio bounding-period 1 cps-map))
   ([bounding-period normalization-generator cps-map]
    (->> cps-map
         (map (fn [node*]
@@ -82,9 +95,10 @@
                    (assoc node*
                           :ratio ratio
                           :bounded-ratio ratio
-                          :bounding-period nil ))))))))
+                          :bounding-period nil))))))))
 
 (defn add-edge
+  ;;  TODO use https://github.com/Engelberg/ubergraph for the graphs
   "Adds to the set of edges of `node-from` the value `node-to`"
   [graph node-from node-to]
   (update graph node-from (comp set conj) node-to))
@@ -148,38 +162,36 @@
   (filter #(-> % :set (set/intersection factors) not-empty)
           scale))
 
-(do
-  ;; #dbg
-  (defn find-subcps
-    [cps-set-size factors sub-cps-set-size subcps-factors-size]
-    (let [base-cps (->cps subcps-factors-size factors)
-          diff-set-size (Math/abs (- cps-set-size sub-cps-set-size))
-          gens-set (set factors)
-          meta* {::type (str sub-cps-set-size ")" subcps-factors-size " of " cps-set-size ")" (count factors))}]
-      (->> base-cps (map
-                     (fn [set*]
-                       (let [diff (set/difference gens-set set*)
-                             diffs (->cps diff-set-size diff)
-                             hex (->cps sub-cps-set-size set*)]
-                         (map
-                          (fn [d] (with-meta (set (map #(set/union % d) hex)) meta*))
-                          diffs))))
-           (apply concat)
-           set)))
-  (comment
-    (find-subcps 3 [1 3 5 7 11 13] 2 4)))
+(defn find-subcps
+  [cps-set-size factors sub-cps-set-size subcps-factors-size]
+  (let [base-cps (->cps subcps-factors-size factors)
+        diff-set-size (Math/abs (- cps-set-size sub-cps-set-size))
+        gens-set (set factors)
+        meta* {::type (str sub-cps-set-size ")" subcps-factors-size " of " cps-set-size ")" (count factors))}]
+    (->> base-cps (map
+                   (fn [set*]
+                     (let [diff (set/difference gens-set set*)
+                           diffs (->cps diff-set-size diff)
+                           hex (->cps sub-cps-set-size set*)]
+                       (map
+                        (fn [d] (with-meta (set (map #(set/union % d) hex)) meta*))
+                        diffs))))
+         (apply concat)
+         set)))
+(comment
+  (find-subcps 3 [1 3 5 7 11 13] 2 4))
 
 (comment
+  (find-subcps 3 [:a :b :c :d :e :f] 2 5)
   ;; For test
   (= (find-subcps 2 [:a :b :c :d :e] 2 4)
      #{#{#{:e :a} #{:b :a} #{:c :a} #{:e :c} #{:e :b} #{:c :b}}
        #{#{:e :a} #{:b :d} #{:b :a} #{:e :b} #{:e :d} #{:d :a}}
        #{#{:c :d} #{:b :d} #{:e :c} #{:e :b} #{:e :d} #{:c :b}}
        #{#{:c :d} #{:e :a} #{:c :a} #{:e :c} #{:e :d} #{:d :a}}
-       #{#{:c :d} #{:b :d} #{:b :a} #{:c :a} #{:d :a} #{:c :b}}}))
+       #{#{:c :d} #{:b :d} #{:b :a} #{:c :a} #{:d :a} #{:c :b}}})
 
-(-> (find-subcps 2 [:a :b :c :d :e] 2 4) first meta)
-
+  (-> (find-subcps 2 [:a :b :c :d :e] 2 4) first meta))
 
 (comment
   "If the common generator is factored out of the 3)5 dekany, the resulting hexany intersects with the corresponding 2)5 hexany"
@@ -218,25 +230,22 @@
         (map (juxt get-cps-description identity))
         (into {})))
 
-(do
-  (defn subcps-sets->data [period norm-fac subcps-set]
-    (->>  subcps-set
-          (map (juxt get-cps-description
-                     #(->> %
-                           set->maps
-                           (bound-ratio period norm-fac)
-                           (maps->data :bounded-ratio)
-                           ((fn [data] (+meta (-> % first count)
-                                             (set (apply concat %))
-                                             norm-fac
-                                             data
-                                             :type (::type (meta %))))))))
-          (into {})))
+(defn subcps-sets->data [period norm-fac subcps-set]
+  (->>  subcps-set
+        (map (juxt get-cps-description
+                   #(->> %
+                         set->maps
+                         (bound-ratio period norm-fac)
+                         (maps->data :bounded-ratio)
+                         ((fn [data] (+meta (-> % first count)
+                                            (set (apply concat %))
+                                            norm-fac
+                                            data
+                                            :type (::type (meta %))))))))
+        (into {})))
 
-  (comment)
-  (->> (find-subcps 4 [1 3 5 7 9 11] 2 4)
-       (subcps-sets->data 2 1))
-  )
+(comment
+  (->> (find-subcps 4 [:a :b :c :d] 2 3)))
 
 (defn filter-subcps-map
   ([subcps-map factors] (filter-subcps-map subcps-map factors false))
@@ -326,15 +335,13 @@
        (maps->data :bounded-ratio)
        (+meta size factors norm-fac)))
 
-(make 3 [1 3 5 7] :period 2)
-
 (defn +subcps [cps-data set-size factors-size]
   (let [{:keys [cps/size cps/factors period cps/normalized-by]} (:meta cps-data)]
     (update cps-data :subcps merge
             (->> (find-subcps size factors set-size factors-size)
                  (subcps-sets->data period normalized-by)))))
 
-(comment (+subcps (make 2 [1 3 5 7] :period 2) 2 3 ))
+(comment (+subcps (make 2 [1 3 5 7] :period 2) 2 3))
 
 (defn get-possible-subcps-data
   "Get the cell-row data for all possible subcps -i.e an inverted pascal's traingle. Note the `cps-size` is the cell in the triangle
@@ -345,8 +352,6 @@
        (map (fn [row]
               [row (range (max 1 (+ cps-size (- row cps-row)))
                           (inc (min row cps-size)))]))))
-(comment (get-possible-subcps-data 5 8))
-
 (defn +all-subcps-row [cps-data [row cps-sizes]]
   (reduce (fn [cps-data* set-size]
             (+subcps cps-data* set-size row))
@@ -358,11 +363,32 @@
     (->> (get-possible-subcps-data size (count factors))
          (reduce #(+all-subcps-row %1 %2) cps-data))))
 
-(make 2 [1 3 5 7])
-(-> (make 3 [1 3 5 7 9 11])
-    (+subcps 2 4)
-     :subcps
-    #_get-subcps-basic-data)
+(defn archi-subcps-sets
+  "Archetypal subsets"
+  [cps-set-size cps-factors-size]
+  (mapcat (fn [[factors-size set-sizes]]
+            (mapcat (fn [set-size]
+                      (let [factors (map num->kw (range cps-factors-size))]
+                        (map (fn [set*]
+                               {:name (str/replace (get-cps-description set*) #":" "")
+                                #_(format "%s)%s %s"
+                                          set-size
+                                          factors-size
+                                          (->> set*
+                                               (apply set/union)
+                                               sort
+                                               (map name)
+                                               (str/join ".")))
+                                :set set*})
+                             (find-subcps cps-set-size
+                                          factors
+                                          set-size
+                                          factors-size))))
+                    set-sizes))
+          (get-possible-subcps-data cps-set-size cps-factors-size)))
+
+(comment
+  (archi-subcps-sets 3 6))
 
 (defn get-subcps-basic-data [cps-data]
   (let [parse-type-as-numbers
@@ -431,14 +457,13 @@
 
   ;;  nested subcps
 
-  (-> (make 2 [1 3 5 7 9 11 ])
+  (-> (make 2 [1 3 5 7 9 11])
       (+subcps 2 5)
       (update-in [:subcps "1.3.5.7.9"] +subcps 2 4)
       :subcps
       (get "1.3.5.7.9")
       :subcps
       (get "1.3.5.7")))
-
 
 (comment
   (count (combo/combinations (range 6) 6))
@@ -467,7 +492,11 @@
           55/21
           165/56]))
 (comment
-  (make 5 [1 2 3 4 5 6 7 8 9 10])
+  (->> (make 3 [1 3 5 7 9 11])
+       #_(+all-subcps)
+       #_:subcps
+       :scale
+       #_(map (comp :scale second)))
   (require
    '[user :refer [spy]]
    '[clojure.test :refer [deftest testing is run-tests]]
