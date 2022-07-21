@@ -9,6 +9,9 @@
                  [time-time "0.1.0-SNAPSHOT"]
                  [com.taoensso/timbre "4.10.0"]
                  [overtone "0.10.6"]
-                 [table "0.5.0"]]
+                 [table "0.5.0"]
+                 [org.clojure/tools.namespace "1.3.0"]
+                 [quil "4.0.0-SNAPSHOT"]]
   :jvm-opts ["-Xmx8g"]
-  :repl-options {:init-ns erv.core})
+  :repl-options {:init-ns user})
+
