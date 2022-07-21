@@ -58,25 +58,25 @@
        :mos-map))
 
 (comment
-  (submos-list-by-mos '({:mos [5 7],
-                         :degree 0,
-                         :mos-degrees [0 2],
+  (submos-list-by-mos '({:mos [5 7]
+                         :degree 0
+                         :mos-degrees [0 2]
                          :rotation {:mos [5 7], :degree 0, :at-zero? true}}
-                        {:mos [5 7],
-                         :degree 1,
-                         :mos-degrees [1 3],
+                        {:mos [5 7]
+                         :degree 1
+                         :mos-degrees [1 3]
                          :rotation {:mos [5 7], :degree 1, :at-zero? false}}
-                        {:mos [5 7],
-                         :degree 2,
-                         :mos-degrees [2 4],
+                        {:mos [5 7]
+                         :degree 2
+                         :mos-degrees [2 4]
                          :rotation {:mos [5 7], :degree 2, :at-zero? false}}
-                        {:mos [4 8],
-                         :degree 3,
-                         :mos-degrees [3 0],
+                        {:mos [4 8]
+                         :degree 3
+                         :mos-degrees [3 0]
                          :rotation {:mos [8 4], :degree 0, :at-zero? true}}
-                        {:mos [5 7],
-                         :degree 4,
-                         :mos-degrees [4 1],
+                        {:mos [5 7]
+                         :degree 4
+                         :mos-degrees [4 1]
                          :rotation {:mos [7 5], :degree 1, :at-zero? false}})))
 
 (def mos-freqs (fn [mos] (-> mos frequencies vals set)))
@@ -115,7 +115,6 @@
 (comment
   (make-submos-for-pattern [3 2 3 2 2] [2 3]))
 
-
 (defn true-submos? [period generator submos]
   (let [submos-set (set submos)
         mos (mos/make-mos period generator)
@@ -146,7 +145,6 @@
                    :submos-by-mos (submos-list-by-mos submos)})))
          (into []))))
 
-
 (defn filter-mos-members [mos-set submos]
   (let [exclusions (into #{} (mapcat get-all-rotations mos-set))]
     (remove exclusions submos)))
@@ -159,7 +157,6 @@
    (let [generators (range 1 (Math/ceil (/ (count mos) 2)))]
      (mapcat #(make-submos-for-generator mos mos-generator %) generators))))
 
-
 (comment
 ;;; NOTE three approaches
   ;; 1. Tanabe Cycle: rotate the mos and group it with the pattern
@@ -170,7 +167,7 @@
          (map-indexed (fn [index mos] [index (groups->submos (group mos pattern))]))
          ;; NOTE may be a good idea to keep the degrees that correspond to each submos
          #_(deduplicate #{})
-         #_ :mos-set))
+         #_:mos-set))
 
   ;; 2. Rotate the pattern and group the mos with it
   ;; (yields a retrograde version of the submoses)
@@ -196,4 +193,7 @@
               (->> mos-data :submos-by-mos
                    (map (fn [[pattern mosi]]
                           [pattern
-                           (not (empty? (filter #(-> % :rotation :at-zero?) mosi)))])))))))
+                           (not (empty? (filter #(-> % :rotation :at-zero?) mosi)))]))))))
+  (take 10
+        (make-all-submos
+         [1 5 1 5 5 1 5 5 1 5 5 1 5 5 1 5 1 5 5 1 5 5 1 5 5 1 5 5 1 5 1 5 5 1 5 5 1 5 5 1 5 5 1 5 1 5 5 1 5 5 1 5 5 1 5 5 1 5 1 5 5 1 5 5 1 5 5 1 5 5 1 5 1 5 5 1 5 5 1 5 5 1 5 5 1 5 5] 50 [[311] [50 261] [50 50 211] [50 50 50 161] [50 50 50 50 111] [50 50 50 50 50 61] [50 50 50 50 50 50 11] [39 11 39 11 39 11 39 11 39 11 39 11 11] [28 11 11 28 11 11 28 11 11 28 11 11 28 11 11 28 11 11 11] [17 11 11 11 17 11 11 11 17 11 11 11 17 11 11 11 17 11 11 11 17 11 11 11 11] [6 11 11 11 11 6 11 11 11 11 6 11 11 11 11 6 11 11 11 11 6 11 11 11 11 6 11 11 11 11 11] [6 6 5 6 5 6 5 6 5 6 6 5 6 5 6 5 6 5 6 6 5 6 5 6 5 6 5 6 6 5 6 5 6 5 6 5 6 6 5 6 5 6 5 6 5 6 6 5 6 5 6 5 6 5 6 5] [1 5 1 5 5 1 5 5 1 5 5 1 5 5 1 5 1 5 5 1 5 5 1 5 5 1 5 5 1 5 1 5 5 1 5 5 1 5 5 1 5 5 1 5 1 5 5 1 5 5 1 5 5 1 5 5 1 5 1 5 5 1 5 5 1 5 5 1 5 5 1 5 1 5 5 1 5 5 1 5 5 1 5 5 1 5 5] [1 1 4 1 1 4 1 4 1 1 4 1 4 1 1 4 1 4 1 1 4 1 4 1 1 4 1 1 4 1 4 1 1 4 1 4 1 1 4 1 4 1 1 4 1 4 1 1 4 1 1 4 1 4 1 1 4 1 4 1 1 4 1 4 1 1 4 1 4 1 1 4 1 1 4 1 4 1 1 4 1 4 1 1 4 1 4 1 1 4 1 4 1 1 4 1 1 4 1 4 1 1 4 1 4 1 1 4 1 4 1 1 4 1 4 1 1 4 1 1 4 1 4 1 1 4 1 4 1 1 4 1 4 1 1 4 1 4 1 1 4 1 4] [1 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 3 1 1 1 3 1 1 3] [1 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2 1 1 1 1 2 1 1 1 2] [1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1]])))
