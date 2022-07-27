@@ -48,3 +48,13 @@
                       (not= % n))))))
 
 (defn interval [ratio-a ratio-b] (/ ratio-b ratio-a))
+
+(defn period-reduce
+  ([ratio] (period-reduce 2 ratio))
+  ([period ratio]
+   (loop [ratio ratio]
+     (cond
+       (> period ratio 1) ratio
+       (or (= period ratio) (= 1 ratio)) 1
+       (> ratio period) (recur (/ ratio period))
+       (< ratio period) (recur (* ratio period))))))
