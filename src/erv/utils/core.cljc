@@ -28,7 +28,6 @@
 (defn factors [n]
   (filter #(= 0 (rem n %)) (range 2 n)))
 
-
 (defn prime-factors [n]
   (loop [n n divisor 2 factors []]
     (if (< n 2)
@@ -58,3 +57,5 @@
        (or (= period ratio) (= 1 ratio)) 1
        (> ratio period) (recur (/ ratio period))
        (< ratio period) (recur (* ratio period))))))
+
+(defn indexes-of [e coll] (keep-indexed #(if (= e %2) %1) coll))
