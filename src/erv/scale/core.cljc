@@ -125,7 +125,7 @@
    {:keys [periods base-freq note-dur direction on-event]
     :or {periods 1
          base-freq 220
-         note-dur #?(:clj 300 :cljs 0.5)
+         note-dur #?(:clj 0.5 :cljs 0.5)
          direction :up-down
          on-event (fn [i freq] (-> (wrap-at i scale)
                                    (dissoc :bounding-period :bounded-ratio)
