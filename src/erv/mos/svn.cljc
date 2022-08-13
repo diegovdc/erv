@@ -7,7 +7,6 @@
       target-size 50]
   (let [freqs (frequencies model)
         total-freqs (count freqs)
-        interval->freq (set/map-invert freqs)
         freqs-permutations (combo/permutations (vals freqs))
         possible-interval-sizes (combo/combinations
                                  (range 1 (inc target-size))
@@ -16,8 +15,7 @@
          (map
           (fn [intervals-sizes]
             (for [fs freqs-permutations
-                  :let [res {:intervals (map #(apply * %)
-                                             (partition 2 (interleave fs intervals-sizes)))
+                  :let [res {:intervals intervals-sizes
                              :freqs fs}]
                   :when (= target-size
                            (apply + (map (fn [i f] (* i f))
@@ -27,4 +25,7 @@
          (filter seq)
          flatten
          (map (fn [{:keys [intervals freqs]}]
-                (into {} (map (fn [i f] {f i}) intervals freqs)))))))
+                (into {} (map (fn [i f] {i f}) intervals freqs))
+                ;; TODO lost some information, so need to map the output above which maps new intervals to freqs
+                ;; into the structure freqs map above so that we can substitute the model's intervals with the new intervals
+                )))))

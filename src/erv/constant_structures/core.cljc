@@ -3,6 +3,7 @@
   (:require
    [clojure.math.combinatorics :as combo]
    [erv.cps.core :as cps]
+   [erv.edo.core :as edo]
    [erv.utils.core :refer [interval round2]]))
 
 (defn maybe-round
@@ -61,14 +62,17 @@
                            (:scale (edo/from-pattern [2 4 3 1 3]))))
   #_(:constant-structure? (analyze
                            (:scale (cps/make 2 [11 13 5 7]))))
+
   (:constant-structure? (analyze
                          (:scale (cps/make 2 [1 3 5 7 9]))))
+  (:constant-structure? (analyze
+                         (:scale (edo/from-pattern [2 2 1 2 2 2 1]))))
   #_(:non-cs-intervals (analyze
                         (:scale (cps/make 3 (map #(* 1 %) [1 3 7 9 11 15])
                                           :norm-fac (* 1 9 11)))))
   (:non-cs-intervals (analyze
-                          ;; taken from http://anaphoria.com/Wilson1-3-7-9-11-15x3_pascal_eikosany.scl
-                          ;; See also tieminos.learning.cps-lumatone.analysis.1-3-7-9-11-15
+                       ;; taken from http://anaphoria.com/Wilson1-3-7-9-11-15x3_pascal_eikosany.scl
+                       ;; See also tieminos.learning.cps-lumatone.analysis.1-3-7-9-11-15
                       (:scale
                        (-> (cps/make 3 (map #(* 1 %) [1 3 7 9 11 15])
                                      :norm-fac (* 1 9 11))
@@ -88,4 +92,3 @@
                                        :bounding-period 2}]))))))
 
 (< 12/11 19/17 7/6)
-
