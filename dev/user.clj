@@ -1,6 +1,6 @@
 (ns user
   (:require
-   #_[overtone.core :as o :refer :all :exclude [tap]]
+   [overtone.core :as o :refer :all :exclude [tap]]
    [clojure.tools.namespace.repl :refer [set-refresh-dirs refresh refresh-all]]
    #_[potemkin :refer [import-vars]]
    #_[clj-utils.core]
@@ -34,3 +34,4 @@
 
 #_(defn test-sound []
     (eval '(demo (sin-osc 400))))
+

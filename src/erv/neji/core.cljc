@@ -42,6 +42,5 @@
                               :neji/edo-size edo-size
                               :neji/prime prime})))
 (comment (make 12 19)
-         (->> (make 12 47)
-              :scale
-              (map :bounded-ratio)))
+         (->> (make 12 47)))
+

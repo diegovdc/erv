@@ -31,11 +31,10 @@
           (if (apply = (seq-ratios (take-last 6 seq**)))
             seq**
             (recur seq** a* b*))))))
-  (let [r (recurrent-seq [1 1 1]
-                         :i1 1
-                         :i2 3
-                         :f (fn [a b] (/ (+ (* 2 a) b)
-                                             2))
+  (let [r (recurrent-seq (map bigint [1 1 1 2 3 4 5 6])
+                         :i1 6
+                         :i2 7
+                         :f (fn [a b] (+ a b))
                          :seq-len 40)]
     {:convergence (last (seq-ratios r))
      :converges-at (converges-at r)
@@ -57,7 +56,7 @@
       (->> (recurrent-seq (mapv bigint seed)
                           :i1 3
                           :i2 2
-                          ;; :f (fn [a b] (* 4/3 (+ a b)))
+                          :f (fn [a b] ())
                           )
            (partition 9 1)
            (map (fn [seq*]
