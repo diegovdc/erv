@@ -7,8 +7,9 @@
       (throw (ex-info (s/explain-str spec input) {:input input}))))
 
 (defn wrap-at [i coll]
-  (let [i* (mod i (count coll))]
-    (nth coll i*)))
+  (let [size (count coll)
+        i* (if (zero? size) 0 (mod i size))]
+    (nth coll i* nil)))
 
 (defn round2
   "Round a double to the given precision (number of significant digits)"

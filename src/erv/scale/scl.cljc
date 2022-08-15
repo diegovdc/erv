@@ -119,11 +119,18 @@
   (count meru/test1)
   (nth meru/test1 )
   (get-cps-meta-description (cps/make 2 [1 3 5 7]))
+
   (first meru/test1)
   (format-scale-for-scl (:scale (first meru/test1)))
   (let [index 9
         scl (make-scl-file (first meru/test1) #_(nth meru/test1 index))]
     (spit
-     (str "/Users/diego/Music/tunings/"  "22t-" (:filename scl))
-     (:content scl)))
+      (str "/Users/diego/Music/tunings/"  "22t-" (:filename scl))
+      (:content scl)))
+
+  (spit "/home/diego/Desktop/dekany-1-5-7-13-23_p2.scl" (:content (make-scl-file (cps/make 2 [1 5 7 13 23] :norm-gen 115/64))))
+
+  (format-scale-for-scl (:scale (cps/make 2 [1 3 5 7] :norm-fac 35)))
   (spit "/home/diego/Desktop/dekany-1-5-7-13-23_p2.scl" (:content (make-scl-file (cps/make 2 [1 5 7 13 23] :norm-gen 115/64)))))
+  (spit "/home/diego/Desktop/polydori.scl"
+        (:content (make-scl-file (cps/make 4 [1 3 9 19 15 21 7] :norm-fac (* 15 21 19 9)) )))

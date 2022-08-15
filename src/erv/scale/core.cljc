@@ -1,22 +1,23 @@
 (ns erv.scale.core
   #?@
-   (:clj
-    [(:require
-      [clojure.spec.alpha :as s]
-      [clojure.string :as str]
-      [erv.utils.conversions :refer [cps->name* ratio->cents]]
-      [erv.utils.core :refer [interval wrap-at]]
-      [erv.utils.sequencer :refer [play!]]
-      [table.core :as t]
-      [taoensso.timbre :as timbre])]
-    :cljs
-    [(:require
-      [clojure.spec.alpha :as s]
-      [clojure.string :as str]
-      [erv.utils.conversions :refer [cps->name* ratio->cents]]
-      [erv.utils.core :refer [interval wrap-at]]
-      [erv.utils.sequencer :refer [play!]]
-      [taoensso.timbre :as timbre])]))
+  (:clj
+   [(:require
+     [clojure.spec.alpha :as s]
+     [clojure.string :as str]
+     [erv.cps.core :as cps]
+     [erv.utils.conversions :refer [cps->name* ratio->cents]]
+     [erv.utils.core :refer [interval wrap-at]]
+     [erv.utils.sequencer :refer [play!]]
+     [table.core :as t]
+     [taoensso.timbre :as timbre])]
+   :cljs
+   [(:require
+     [clojure.spec.alpha :as s]
+     [clojure.string :as str]
+     [erv.utils.conversions :refer [cps->name* ratio->cents]]
+     [erv.utils.core :refer [interval wrap-at]]
+     [erv.utils.sequencer :refer [play!]]
+     [taoensso.timbre :as timbre])]))
 
 (s/def ::bounded-ratio number?)         ;; Used to be `ratio?` but changed to `number?` to support `edos`
 (s/def ::bounding-period number?)
@@ -66,6 +67,27 @@
   (reduce #(conj %1 (+ (last %1) %2))
           [base-deg]
           intervals))
+
+(defn interval->ratio
+  "Get the ratio between two degrees in a scale"
+  [scale origin-deg target-deg]
+  (let [scale-len (count scale)
+        bounding-period (:bounding-period (first scale))
+        origin (:bounded-ratio (wrap-at origin-deg scale))
+        target (:bounded-ratio (wrap-at target-deg scale))
+        period* (get-period 0 scale-len (- target-deg origin-deg))
+        period-transp (transpose-by bounding-period period*)]
+    (* period-transp (interval origin target))))
+
+(comment
+  (require '[erv.cps.core :as cps])
+  (:scale (cps/make 2 [1 3 5 7]))
+  (interval->ratio (:scale (cps/make 2 [1 3 5 7])) 2 4)
+  (interval->ratio (:scale (cps/make 2 [1 3 5 7])) 2 10)
+  (interval->ratio (:scale (cps/make 2 [1 3 5 7])) 2 8)
+  (interval->ratio (:scale (cps/make 2 [1 3 5 7])) 2 14)
+  (interval->ratio (:scale (cps/make 2 [1 3 5 7])) 8 2)
+  (interval->ratio (:scale (cps/make 2 [1 3 5 7])) 8 -4))
 
 (defn stateful-interval->degree
   "Returns a statennful function that takes an interval and returns a degree based
@@ -120,6 +142,7 @@
                     #_:up-down (concat degrees (rest (reverse degrees))))]
      (map #(deg->freq scale base-freq %) degrees*))))
 
+
 (defn demo!
   [scale &
    {:keys [periods base-freq note-dur direction on-event]
@@ -166,7 +189,9 @@
                                      (map (fn [r2]  (conversor (interval r r2))) ratios))
                                    ratios))))]
       #?(:clj (t/table data)
-         :cljs (js/console.table data)))))
+         :cljs (js/console.table data))
+      data))
+  )
 
 (comment
   (require '[erv.cps.core :as cps])

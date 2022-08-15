@@ -12,6 +12,7 @@
 (comment
   (require
    '[erv.cps.core :as cps]
+   '[erv.utils.conversions :as conv]
    '[erv.scale.core :refer [demo!]]
    '[erv.mos.submos :refer [make-all-submos]]
    '[erv.mos.mos :refer [make-mos]])
@@ -45,3 +46,6 @@
                              :bounded-ratio (nth edo degree)
                              :bounding-period period})
                           degrees)})))
+
+
+(from-pattern [ 2, 2, 5, 2, 5, 2, 5, 2, 2, 5, 2, 5, 2, 5, 2, 5])
