@@ -1,10 +1,44 @@
 # erv
 
-A Clojure library designed to ... well, that part is up to you.
+A library for generating microtonal scales inspired by work and theories of Erv Wilson.
 
 ## Usage
+This library has several different namespaces each corresponding to a different type of scale.
 
-FIXME
+### CPS (Combination product sets)
+For an introduction to CPS scales:
+http://www.anaphoria.com/hexany.pdf
+https://en.xen.wiki/w/Combination_product_set
+
+``` clojure
+(require '[erv.cps.core :as cps])
+
+(def my-hexany (cps/make 2 [1 3 5 7]))
+
+(-> my-hexany
+  +all-subcps ;; add all subsets under the `:subcps` key
+  )
+```
+
+
+### MOS (Moment of Symmetry)
+For an introduction to MOS scales:
+https://www.anaphoria.com/mos.pdf
+https://anaphoria.com/wilsonintroMOS.html
+https://en.xen.wiki/w/MOS_scale
+``` clojure
+(require '[erv.mos.core :as mos]
+         '[erv.mos.submos :as submos]')
+
+(def period 31)
+(def generator 13)
+(def my-mos (mos/make period generator))
+(submos/make-all-submos (nth my-mos 3) generator) ;; this will generate all secondary MOS and all possible "traverse" MOS
+
+
+
+```
+
 
 ## License
 
