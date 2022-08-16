@@ -40,6 +40,10 @@ https://en.xen.wiki/w/MOS_scale
 ```
 
 
+## Note
+This library is a work in progress and mostly a workshop for myself, so the code is not polished as it should. If you are using this library, feel free to let make me aware of so that I can take more care of the code and the documentation.
+
+
 ## License
 
 Copyright © 2020 FIXME
