@@ -1,4 +1,5 @@
-{:deps {org.clojure/clojure {:mvn/version "1.11.1"}
+{:paths ["src" "test" "dev"]
+ :deps {org.clojure/clojure {:mvn/version "1.11.1"}
         org.clojure/math.combinatorics {:mvn/version "0.1.6"}
         org.clojars.videco/time-time {:local/root "../time-tiem" :deps/manifest :deps}
         overtone/overtone {:local/root "../overtone" :deps/manifest :deps}

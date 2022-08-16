@@ -58,7 +58,6 @@
 
 (defn mos-as-intervals [mos] (mapv get-diffs mos))
 
-
 (def make-mos
   (memoize
    (fn [period generator]
@@ -70,3 +69,5 @@
               mos-points->mos
               mos-as-intervals)
          {:true-mos? true-mos?})))))
+
+(def make make-mos)

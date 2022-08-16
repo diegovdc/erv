@@ -21,7 +21,6 @@
     (let [scale-size (apply + intervals)
           degs (intervals->degrees intervals)
           degs-set (set degs)]
-      (println degs-set)
       (->> degs
            (mapcat (fn [deg]
                      (map (fn [chord-shape]
@@ -33,7 +32,7 @@
                           chord-shapes-set)))
            (filter #(let [chord (set (:degrees %))]
                       (= chord (set/intersection degs-set chord)))))))
-  (edo-chords [2 2 1 2 2 2 1] #{[4 3 5] [3 4 5] [3 3 6]}))
+  #_(edo-chords [2 2 1 2 2 2 1] #{[4 3 5] [3 4 5] [3 3 6]}))
 
 (def edo-12-names
   {0 "C", 1 "C#", 2 "D", 3 "D#", 4 "E", 5 "F", 6 "F#"
@@ -45,23 +44,23 @@
 (defn +notes [names-map chords]
   (map #(assoc % :notes (name-degrees names-map (:degrees %))) chords))
 
-(map (partial name-degrees edo-12-names)
-     (edo-chords [1 2 1 2 1 2 1 2] #{[4 3 5] [3 4 5] [3 3 6]}))
+(comment
+  (map (partial name-degrees edo-12-names)
+       (edo-chords [1 2 1 2 1 2 1 2] #{[4 3 5] [3 4 5] [3 3 6]}))
 
-(map (partial name-degrees edo-12-names)
-     (edo-chords [1 1 3 1 1 2 3] #{[4 3 5] [3 4 5] [3 3 6]}))
+  (map (partial name-degrees edo-12-names)
+       (edo-chords [1 1 3 1 1 2 3] #{[4 3 5] [3 4 5] [3 3 6]}))
 
-(map (partial name-degrees edo-12-names)
-     (edo-chords [2 1 1 2 1 1 2 1 1] #{[4 3 5] [3 4 5] [3 3 6]}))
+  (map (partial name-degrees edo-12-names)
+       (edo-chords [2 1 1 2 1 1 2 1 1] #{[4 3 5] [3 4 5] [3 3 6]}))
 
-
-(->> (edo-chords [2 1 1 2 1 1 2 1 1]
-                 #{[4 3 3 2]
-                   [4 3 4 1]
-                   [3 4 3 2]
-                   [3 4 4 1]
-                   [5 5 2]})
-     (+notes edo-12-names)
-     (group-by :chord)
-     (map (juxt first
-                (comp #(map :notes %) second))))
+  (->> (edo-chords [2 1 1 2 1 1 2 1 1]
+                   #{[4 3 3 2]
+                     [4 3 4 1]
+                     [3 4 3 2]
+                     [3 4 4 1]
+                     [5 5 2]})
+       (+notes edo-12-names)
+       (group-by :chord)
+       (map (juxt first
+                  (comp #(map :notes %) second)))))
