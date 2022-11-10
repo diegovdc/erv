@@ -6,7 +6,7 @@
   :dependencies [[org.clojure/clojure "1.11.1"]
                  [org.clojure/math.combinatorics "0.1.6"]
                  [org.clojure/data.json "2.4.0"]
-                 [time-time/time-time "0.1.0-SNAPSHOT"]
+                 [org.clojars.videco/time-time "0.1.0-SNAPSHOT"]
                  [com.taoensso/timbre "4.10.0"]
                  [overtone "0.10.6"]
                  [table "0.5.0"]

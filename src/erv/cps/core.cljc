@@ -492,16 +492,18 @@
           55/21
           165/56]))
 (comment
-  (->> (make 3 [1 3 5 7 9 11])
-       #_(+all-subcps)
-       #_:subcps
-       :scale
-       #_(map (comp :scale second)))
+  (->> (make 2 [1 3 5 7])
+       (+all-subcps)
+       :subcps
+       (sort-by first)
+       reverse
+       (map (juxt first (comp :cps/factors :meta second))))
   (require
 
-   '[clojure.test :refer [deftest testing is run-tests]]
-   '[erv.utils.conversions :as conv]
-   '[erv.scale.core :as scale])
+    '[clojure.test :refer [deftest testing is run-tests]]
+    '[erv.utils.conversions :as conv]
+    '[erv.scale.core :as scale])
   (scale/print-scale-intervals! (:nodes (make 2 [1 3 5 7]))
                                 :unit :ratios
                                 :ratio-type :ratio))
+

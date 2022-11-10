@@ -1,8 +1,33 @@
 (ns erv.utils.ratios
-  (:require [erv.utils.conversions :as conv]))
+  (:require
+   [erv.utils.conversions :as conv]
+   [erv.utils.core :refer [round2]]))
+
+(defn ratio-proximity-list
+  "Make a list of `ratios` that approximate a `target-ratio` in a list of `target-ratios`"
+  ([target-ratios ratios] (ratio-proximity-list target-ratios ratios 33))
+  ([target-ratios ratios tolerance-cents]
+   (->> target-ratios
+        (map (fn [target]
+               {target
+                (reduce
+                 (fn [acc ratio]
+                   (let [diff (- (conv/ratio->cents target)
+                                 (conv/ratio->cents ratio))]
+                     (if (> (abs diff) tolerance-cents)
+                       acc
+                       (conj acc {:ratio ratio
+                                  :diff (round2 3 diff)}))))
+                 []
+                 ratios)}))
+        (map-indexed (fn [degree data]
+                       [degree
+                        (sort-by (comp abs :diff) (first (vals data)))]))
+        (sort-by first))))
 
 (defn ratio-proximity
-  "Calculates the proximity between `ratios` and a list of `target-ratios`. I tries to find the closest ratio to a given target-ratio"
+  "Calculates the proximity between `ratios` and a list of `target-ratios`.
+  Tries to find the closest ratio to a given target-ratio."
   [target-ratios ratios]
   (map (fn [target]
          {target
