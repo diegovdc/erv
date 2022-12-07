@@ -1,6 +1,7 @@
 (ns erv.meru.core
   (:require [clojure.math.combinatorics :as combo]
-            [erv.cps.core :refer [within-bounding-period]]))
+            [erv.cps.core :refer [within-bounding-period]]
+            [erv.constant-structures.graphics :as sketch]))
 
 (defn seq-ratios [recurrent-seq]
   (->> recurrent-seq
@@ -95,7 +96,10 @@
 
     (->> test1
          (sort-by (comp :size :meta) >)
-         (map (comp (juxt :size :total-triads) :meta)))))
+         first
+         :scale
+
+         #_(map (comp (juxt :size :total-triads) :meta)))))
 
 (defn harmonic-mean [a b]
   (/ (* 2 a b)
