@@ -1,10 +1,13 @@
 {:paths ["src" "test" "dev"]
  :deps {org.clojure/clojure {:mvn/version "1.11.1"}
+        org.clojure/clojurescript {:mvn/version "1.11.60"}
+        com.google.javascript/closure-compiler-unshaded {:mvn/version "v20221102"}
         org.clojure/math.combinatorics {:mvn/version "0.1.6"}
         org.clojars.videco/time-time {:local/root "../time-tiem" :deps/manifest :deps}
-        overtone/overtone {:local/root "../overtone" :deps/manifest :deps}
+        ;; overtone/overtone {:local/root "../overtone" :deps/manifest :deps}
         com.taoensso/timbre {:mvn/version "4.10.0"}
         quil/quil {:mvn/version "4.0.0-SNAPSHOT"}
+        com.gfredericks/exact {:mvn/version "0.1.11"}
         org.clojure/tools.namespace {:mvn/version "1.3.0"}
         table/table {:mvn/version "0.5.0"}
         org.clojure/data.json {:mvn/version "2.4.0"}}}

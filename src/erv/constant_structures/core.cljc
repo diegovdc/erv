@@ -8,9 +8,10 @@
 
 (defn maybe-round
   [n]
-  (if (rational? n)
-    n
-    (round2 6 n)))
+  #?(:clj (if (rational? n)
+            n
+            (round2 6 n))
+     :cljs (round2 6 n)))
 
 (defn get-intervals
   [note-pair]
@@ -91,4 +92,4 @@
                                        :bounded-ratio 18/16
                                        :bounding-period 2}]))))))
 
-(< 12/11 19/17 7/6)
+#_(< 12/11 19/17 7/6)

@@ -114,9 +114,8 @@
       (let [rest* (rest nodes)
             current-node (first nodes)
             edges (->> rest*
-                       (filter #(-> (set/intersection (:set current-node)
-                                                      (:set %))
-                                    seq))
+                       (filter #(= (dec (count (:set %))) (count (set/intersection (:set current-node)
+                                                            (:set %)))))
                        (map #(conj [] current-node %)))]
         (recur rest*
                (reduce
@@ -492,14 +491,17 @@
           55/21
           165/56]))
 (comment
-  (->> (make 2 [1 3 5 7])
+  (->> (make 3 [1 3 5 7 9 11])
        (+all-subcps)
        :subcps
        (sort-by first)
        reverse
        (map (juxt first (comp :cps/factors :meta second))))
-  (require
 
+  (->> (make 3 [1 3 5 7 9 11])
+       :graphs :simple)
+
+  (require
     '[clojure.test :refer [deftest testing is run-tests]]
     '[erv.utils.conversions :as conv]
     '[erv.scale.core :as scale])

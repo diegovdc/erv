@@ -39,7 +39,9 @@
                          :seq-len 40)]
     {:convergence (last (seq-ratios r))
      :converges-at (converges-at r)
-     :seq r}))
+     :seq r})
+
+  )
 
 (defn within-period [period seq*]
   (let [max* (apply max seq*)
@@ -60,6 +62,48 @@
                             :i2 2
                             :f (fn [a b] (+ a b)))
              (partition 9 1)
+             (map (fn [seq*]
+                    (let [seq** (sort (set (map (partial within-bounding-period period)
+                                                seq*)))
+                          indexed-seq (->> seq**
+                                           (map-indexed (fn [i x] {x i}))
+                                           (apply merge))
+                          min* (/ (apply max seq**) 2)]
+                      (->> seq**
+                           (#(combo/combinations % 3))
+                           (reduce (fn [acc ns]
+                                     (let [diffs (->> ns
+                                                      sort
+                                                      (partition 2 1)
+                                                      (map (fn [[a b]] (- b a))))]
+                                       (if (= 1 (count (set diffs)))
+                                         (update acc :proportional-triads
+                                                 conj {:ratios ns
+                                                       :degrees (->> (map indexed-seq ns))
+                                                       :diff (first diffs)})
+                                         acc)))
+                                   {:meta {:scale :meru
+                                           :period period
+                                           :seed seed
+                                           :size (count seq**)}
+                                    :scale (map (fn [r]
+                                                  {:ratio r
+                                                   :bounded-ratio (/ r min*)
+                                                   :bounding-period 2})
+                                                seq**)})
+                           (#(assoc-in % [:meta :total-triads] (count (:proportional-triads %))))
+                           (#(assoc-in % [:meta :proportional-triads] (:proportional-triads %)))
+                           (#(dissoc % :proportional-triads))))))
+             (remove (comp empty? :proportional-triads :meta)))))
+    (def test1
+      (let [seed [1 1]
+            period 2]
+        (->> (recurrent-seq (mapv bigint seed)
+                            :i1 1
+                            :i2 2
+                            ;; :f (fn [a b] (+ a b))
+                            )
+             (partition 21 1)
              (map (fn [seq*]
                     (let [seq** (sort (set (map (partial within-bounding-period period)
                                                 seq*)))

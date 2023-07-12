@@ -93,7 +93,7 @@
                  :added-notes added-notes
                  :scale+added-notes scale+added-notes*
                  :arcs (make-arcs analysis)
-                 :max-arcs 10})]
+                 :max-arcs 100})]
     state))
 
 (defn update-state [state scale added-notes]
@@ -110,14 +110,19 @@
     state))
 
 (comment
-  (def scale (:scale (cps/make 2 [7 3 9 19 21])))
+  (def scale (:scale (cps/make 2 [1 3 5 7 11] :norm-fac 77)))
+  (println (map :bounded-ratio scale))
+  (def scale (:scale (cps/make 2 [1 3 5 7])))
+  (map (juxt :ratio :bounded-ratio :set) scale)
+  (clojure.pprint/pprint scale)
   (def s (init-cs-tool! scale
                         [;; 57/49
                          ;; 7/6
                          ;; 19/16
                          ;; 76/63
                          ;; 1701/1444
-                         19/16
+                         #_(convo/cents->ratio 400)
+                         ;; 19/16
                          ;; 5/4
                          ;; 76/63
                          ;; 24/19
@@ -125,4 +130,18 @@
                          ;; 900
                          ;; 1020
                          ]))
-  (update-state s scale [700 19/16]))
+  (update-state s scale [#_(convo/cents->ratio 780)
+                         #_(convo/cents->ratio 0)
+                         #_(convo/cents->ratio 780)
+                         #_(convo/cents->ratio 280)
+                         #_(convo/cents->ratio 120)
+                         #_(convo/cents->ratio 290)
+                         11/9
+                         #_(convo/cents->ratio 580)
+                         11/8
+                         #_(convo/cents->ratio 350)
+                         #_(convo/cents->ratio 850)
+                         8/5
+                         #_(convo/cents->ratio 750)
+                         #_(convo/cents->ratio 820)
+                         #_(convo/cents->ratio 930)]))

@@ -36,6 +36,8 @@
       (if (zero? (rem n divisor))
         (recur (/ n divisor) divisor (conj factors divisor))
         (recur n (inc divisor) factors)))))
+(comment
+  (prime-factors 2))
 
 (defn coprime? [& ns]
   (->> ns (map (comp set prime-factors)) (apply set/intersection) empty?))
@@ -59,4 +61,7 @@
        (> ratio period) (recur (/ ratio period))
        (< ratio period) (recur (* ratio period))))))
 
-(defn indexes-of [e coll] (keep-indexed #(if (= e %2) %1) coll))
+(defn indexes-of [el coll] (keep-indexed #(when (= el %2) %1) coll))
+
+(defn pow [n power]
+  (apply * (repeat power n)))

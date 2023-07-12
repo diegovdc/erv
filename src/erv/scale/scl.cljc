@@ -84,9 +84,10 @@
 
 (defn format-ratio [ratio]
   #?(:clj
-     (if (= ratio (int ratio))
-       (str ratio "/" 1)
-       (str ratio))
+     (cond
+       (= ratio (int ratio)) (str ratio "/" 1)
+       (ratio? ratio) (str ratio)
+       :else (conv/ratio->cents ratio))
      :cljs (if (= ratio (int ratio))
              (str ratio "/" 1)
               (conv/ratio->cents ratio))))
@@ -114,7 +115,9 @@
 
 (comment
   (require '[erv.cps.core :as cps]
-           '[erv.meru.core :as meru])
+           '[erv.meru.core :as meru]
+           '[erv.edo.core :as edo])
+  (edo/from-pattern [4,8,1,4,5,4,8,1,8,1,4,5])
   (cps/make 2 [1 3 5 7] :norm-fac 7)
   (count meru/test1)
   (nth meru/test1 )
@@ -131,6 +134,9 @@
   (spit "/home/diego/Desktop/dekany-1-5-7-13-23_p2.scl" (:content (make-scl-file (cps/make 2 [1 5 7 13 23] :norm-gen 115/64))))
 
   (format-scale-for-scl (:scale (cps/make 2 [1 3 5 7] :norm-fac 35)))
+  (format-scale-for-scl (:scale (edo/from-pattern [4,8,1,4,5,4,8,1,8,1,4,5])))
   (spit "/home/diego/Desktop/dekany-1-5-7-13-23_p2.scl" (:content (make-scl-file (cps/make 2 [1 5 7 13 23] :norm-gen 115/64))))
   (spit "/home/diego/Desktop/polydori.scl"
-        (:content (make-scl-file (cps/make 4 [1 3 9 19 15 21 7] :norm-fac (* 15 21 19 9)) ))))
+        (:content (make-scl-file (cps/make 4 [1 3 9 19 15 21 7] :norm-fac (* 15 21 19 9)) )))
+  (spit "53edo-secondary-mos.scl"
+        (:content (make-scl-file (edo/from-pattern [4,8,1,4,5,4,8,1,8,1,4,5])))))
