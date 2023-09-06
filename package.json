@@ -1,6 +1,6 @@
 {
   "name": "@diegovdc/erv",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Calculations and other algorithmic treatments of some of [Erv Wilson's](http://anaphoria.com/wilson.html) music scale theories.",
   "scripts": {
     "release:lib": "shadow-cljs release lib",

@@ -22,7 +22,6 @@ src/archive/huygens-fokker-scala-archive/*.scl
 /dist
 .cider-repl-history
 .shadow-cljs/
-target/
 2)5-dekany-cycles-A.B.C.txt
 dekany-cycles-of-A.D.txt
 dekany.txt
