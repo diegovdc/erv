@@ -42,7 +42,7 @@
 (defn deg->freq
   "Given a `scale` as spec'd above, a `base-freq` and a `degree`,
   get a frequency corresponding to the degree.
-  The `base-freq` is the frequency that which is closest to degrees 0 and -1.
+  The `base-freq` is the frequency which is closest to degrees 0 and -1.
   Degrees are zero-based.
   This function supports non-octave repeating scales. We call the interval of
   repetition the `period` of the scale. That is why for the `scale` each of its
