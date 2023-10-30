@@ -3,7 +3,7 @@
   "version": "0.0.3",
   "description": "Calculations and other algorithmic treatments of some of [Erv Wilson's](http://anaphoria.com/wilson.html) music scale theories.",
   "scripts": {
-    "release:lib": "shadow-cljs release lib",
+    "release:lib": "shadow-cljs release lib; sed -i '' 's/global/window/g' dist/lib.js",
     "watch:lib": "shadow-cljs watch lib",
     "prepublishOnly": "npm run release:lib"
   },
