@@ -55,20 +55,18 @@
   (make-degree->note (erv.cps.core/make 2 [1 3 5 7]))
   )
 
-(do
-  (defn make-set->degrees-map
-    [{:keys [scale] :as _cps}]
-    (->> scale
-         (map-indexed (fn [i {:keys [set]}] [set i]))
-         (into {})))
+(defn make-set->degrees-map
+  [{:keys [scale] :as _cps}]
+  (->> scale
+       (map-indexed (fn [i {:keys [set]}] [set i]))
+       (into {})))
 
-  (defn make-degree->sets-map
-    [{:keys [scale] :as _cps}]
-    (->> scale
-         (map-indexed (fn [i {:keys [set]}] [i set]))
-         (reduce (fn [m [deg set]] (update m deg (fnil conj #{}) set))
-                 {})))
-  (make-degree->sets-map (erv.cps.core/make 2 [1 3 5 7])))
+(defn make-degree->sets-map
+  [{:keys [scale] :as _cps}]
+  (->> scale
+       (map-indexed (fn [i {:keys [set]}] [i set]))
+       (reduce (fn [m [deg set]] (update m deg (fnil conj #{}) set))
+               {})))
 
 
 (defn- set-d1-intersection?
