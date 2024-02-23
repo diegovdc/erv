@@ -1,7 +1,6 @@
 (ns erv.lattice.v2
   (:require
    [clojure.math.combinatorics :as combo]
-   [clojure.set :as set]
    [erv.utils.ratios :refer [analyze-ratio]]))
 
 (def base-coords
@@ -16,32 +15,27 @@
    19 {:x 7 :y -25}
    23 {:x 20 :y -6}})
 
-(do
-  (defn make-coords [base-coords numerator-factors denominator-factors]
-    (let [numer-coords (reduce (fn [{:keys [x y]} factor]
-                                 {:x (+ x (get-in base-coords [factor :x]))
-                                  :y (+ y (get-in base-coords [factor :y]))})
-                               {:x 0 :y 0}
-                               numerator-factors)]
-      (reduce (fn [{:keys [x y]} factor]
-                {:x (- x (get-in base-coords [factor :x]))
-                 :y (- y (get-in base-coords [factor :y]))})
-              numer-coords
-              denominator-factors))))
+(defn make-coords [base-coords numerator-factors denominator-factors]
+  (let [numer-coords (reduce (fn [{:keys [x y]} factor]
+                               {:x (+ x (get-in base-coords [factor :x]))
+                                :y (+ y (get-in base-coords [factor :y]))})
+                             {:x 0 :y 0}
+                             numerator-factors)]
+    (reduce (fn [{:keys [x y]} factor]
+              {:x (- x (get-in base-coords [factor :x]))
+               :y (- y (get-in base-coords [factor :y]))})
+            numer-coords
+            denominator-factors)))
 
-(do
-  (defn ratio->lattice-point
-    [ratio base-coords]
-    (println ratio)
-    (let [{:keys [numerator denominator numer-factors denom-factors]} (analyze-ratio ratio)]
-      {ratio {:ratio ratio
-              :numerator numerator
-              :denominator denominator
-              :numer-factors numer-factors
-              :denom-factors denom-factors
-              :coords (make-coords base-coords numer-factors denom-factors)}}))
-
-  (ratio->lattice-point #?(:clj 7/4 :cljs "7/4") base-coords))
+(defn ratio->lattice-point
+  [ratio base-coords]
+  (let [{:keys [numerator denominator numer-factors denom-factors]} (analyze-ratio ratio)]
+    {ratio {:ratio ratio
+            :numerator numerator
+            :denominator denominator
+            :numer-factors numer-factors
+            :denom-factors denom-factors
+            :coords (make-coords base-coords numer-factors denom-factors)}}))
 
 (defn get-point-data-difference
   "`factor-type` should be `:numer-factors` or `:denom-factors`"
@@ -51,74 +45,91 @@
         factors-set (set (keys (merge ratio-freqs1 ratio-freqs2)))]
     (reduce (fn [acc factor]
               (assoc acc factor (#?(:clj Math/abs :cljs js/Math.abs)
-                                  (- (ratio-freqs1 factor 0)
-                                     (ratio-freqs2 factor 0)))))
+                                 (- (ratio-freqs1 factor 0)
+                                    (ratio-freqs2 factor 0)))))
             {}
             factors-set)))
 
+(defn make-connection
+  [diff-count-set connections-set period point-data1 point-data2]
+  (let [get-diff-count (comp #(apply + %)
+                             vals
+                             (partial get-point-data-difference
+                                      period
+                                      point-data1
+                                      point-data2))]
+    (if (diff-count-set (+ (get-diff-count :numer-factors)
+                           (get-diff-count :denom-factors)))
+      (conj connections-set #{(:ratio point-data1)
+                              (:ratio point-data2)})
+      connections-set)))
 
-(do
-  (defn maybe-make-d1-connection
-    [connections-set period point-data1 point-data2]
-    (let [get-diff-count (comp #(apply + %)
-                               vals
-                               (partial get-point-data-difference
-                                        period
-                                        point-data1
-                                        point-data2))]
-      (println (get-diff-count :numer-factors)
-               (get-diff-count :denom-factors))
-      (if (#{0 1} (+ (get-diff-count :numer-factors)
-                     (get-diff-count :denom-factors)))
-        (conj connections-set #{(:ratio point-data1)
-                                (:ratio point-data2)})
-        connections-set)))
+(defn combine-nodes [coords-data]
+  (->> (for [[r1 d1] coords-data
+             [r2 d2] coords-data]
+         (when-not (= r1 r2)
+           [d1 d2]))
+       (remove nil?)
+       (reduce (fn [acc [r d]]
+                 (update acc r conj d))
+               {})))
 
-  #_(maybe-make-d1-connection #{}
-                            2
-                            {:ratio 3/2
-                             :numerator 3
-                             :denominator 2
-                             :numer-factors [3]
-                             :denom-factors [2]
-                             :coords {:x 40, :y 0}}
-                            {:ratio 9/8
-                             :numerator 9
-                             :denominator 8
-                             :numer-factors [3 3]
-                             :denom-factors [2 2 2]
-                             :coords {:x 80, :y 0}}))
+(defn ref-ratio-in-ratio-edges?
+  [ref-ratio ratio-edges]
+  (->> ratio-edges
+       (filter #(% ref-ratio))
+       first
+       boolean))
 
-(do
-  (defn ratios->lattice-data
-    "NOTE in ClojureScript `ratios` is a list of ratios as strings"
-    [base-coords ratios]
-    (let [coords-data-map (->> ratios
-                               (map #(ratio->lattice-point % base-coords))
-                               (into {}))
-          coords-data (vals coords-data-map)
-          coords (->> coords-data
-                      (map :coords))
-          min-x (->> coords (map :x) (apply min))
-          max-x (->> coords (map :x) (apply max))
-          min-y (->> coords (map :y) (apply min))
-          max-y (->> coords (map :y) (apply max))
-          edges (->> (combo/combinations coords-data 2)
-                     (reduce (fn [edges [p1 p2]]
-                               (println p1 p2)
-                               (maybe-make-d1-connection edges 2 p1 p2))
-                             #{})
-                     (map (fn [ratios]
-                            (map (comp :coords coords-data-map) ratios))))]
+(defn connect-nodes
+  [period combined-nodes]
+  (loop [combined-nodes* combined-nodes
+         edges #{}
+         distances-set #{0 1}]
+    (if-not (seq combined-nodes*)
+      edges
+      (let [[ref-node ns] (first combined-nodes*)
+            max-distance (apply max distances-set)
+            updated-edges (reduce
+                           (fn [edges* node]
+                             (make-connection distances-set
+                                              edges*
+                                              period
+                                              ref-node
+                                              node))
+                           edges
+                           ns)]
+        (if
+         (and (not (ref-ratio-in-ratio-edges? (:ratio ref-node) updated-edges))
+              (<= max-distance (count combined-nodes)))
+          (recur combined-nodes* edges #{(inc max-distance)})
 
-      {:period 2
-       :min-x min-x
-       :max-x max-x
-       :min-y min-y
-       :max-y max-y
-       :data coords-data
-       :edges edges}))
+          (recur (rest combined-nodes*) updated-edges #{0 1}))))))
 
-  #_(ratios->lattice-data base-coords  [3/2 9/8 2/1])
-  #_(ratios->lattice-data base-coords '("1/1" "15/14" "5/4" "10/7" "3/2" "12/7")))
+(defn ^:export ratios->lattice-data
+  "NOTE in ClojureScript `ratios` is a list of ratios as strings"
+  [base-coords ratios]
+  (let [coords-data-map (->> ratios
+                             (map #(ratio->lattice-point % base-coords))
+                             (into {}))
+        coords-data (vals coords-data-map)
+        coords (->> coords-data
+                    (map :coords))
+        min-x (->> coords (map :x) (apply min))
+        max-x (->> coords (map :x) (apply max))
+        min-y (->> coords (map :y) (apply min))
+        max-y (->> coords (map :y) (apply max))
+        edges (->> coords-data-map
+                   combine-nodes
+                   (connect-nodes 2)
+                   (map (fn [ratios]
+                          (map (comp :coords coords-data-map) ratios))))]
+    {:period 2
+     :min-x min-x
+     :max-x max-x
+     :min-y min-y
+     :max-y max-y
+     :data coords-data
+     :edges edges}))
 
+#_(ratios->lattice-data base-coords '("1/1" "15/14" "5/4" "10/7" "3/2" "12/7"))
