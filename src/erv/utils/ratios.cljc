@@ -6,13 +6,13 @@
       [clojure.string :as str]
       [com.gfredericks.exact :as e]
       [erv.utils.conversions :as conv]
-      [erv.utils.core :refer [interval prime-factors round2]])]
+      [erv.utils.core :refer [interval period-reduce prime-factors round2]])]
     :cljs
     [(:require
       [clojure.string :as str]
       [com.gfredericks.exact :as e]
       [erv.utils.conversions :as conv]
-      [erv.utils.core :refer [interval round2 prime-factors]])]))
+      [erv.utils.core :refer [interval period-reduce round2 prime-factors]])]))
 
 (defn ratio-proximity-list
   "Make a list of `ratios` that approximate a `target-ratio` in a list of `target-ratios`"
@@ -131,3 +131,14 @@
                     [(vec ratio-pair) ((juxt identity ratio->factor-string conv/ratio->cents) interval)]))
                 (partition 2 1 ratios))
    :ratio-factorization (mapv (juxt identity ratio->factor-string) ratios)})
+
+(defn ratios->scale
+  ([ratios] (ratios->scale 2 ratios))
+  ([period ratios]
+   (->> ratios
+        (map (fn [r]
+               (let [ratio (period-reduce period r)]
+                 {:ratio ratio
+                  :bounded-ratio ratio
+                  :bounding-period period})))
+        (sort-by :bounded-ratio))))
