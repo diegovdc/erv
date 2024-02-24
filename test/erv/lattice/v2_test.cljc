@@ -62,7 +62,17 @@
                   :coords {:x 0 :y 0}}]
           :edges [[{:x 40 :y 0} {:x 80 :y 0}]
                   [{:x 40 :y 0} {:x 0 :y 0}]]}
-         (ratios->lattice-data base-coords  [3/2 9/8 2/1]))))
+         (ratios->lattice-data base-coords  [3/2 9/8 2/1])))
+  (testing "Will add metadata to edges"
+    (is (= [{:diff 1
+             :single-factor-diff? true
+             :num-diff {5 1}
+             :denom-diff {}}
+            {:diff 2
+             :single-factor-diff? false
+             :num-diff {3 2}
+             :denom-diff {}}]
+           (map meta (:edges (ratios->lattice-data base-coords  [5/4 9/8 2/1])))))))
 
 (deftest combine-nodes-test
   (is (= {{:ratio 3/2

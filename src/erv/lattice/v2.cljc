@@ -52,16 +52,24 @@
 
 (defn make-connection
   [diff-count-set connections-set period point-data1 point-data2]
-  (let [get-diff-count (comp #(apply + %)
-                             vals
-                             (partial get-point-data-difference
+  (let [diffs (partial get-point-data-difference
                                       period
                                       point-data1
-                                      point-data2))]
-    (if (diff-count-set (+ (get-diff-count :numer-factors)
-                           (get-diff-count :denom-factors)))
-      (conj connections-set #{(:ratio point-data1)
-                              (:ratio point-data2)})
+                                      point-data2)
+        get-diff-count (comp #(apply + %) vals)
+        num-diff  (diffs :numer-factors)
+        denom-diff (diffs :denom-factors)
+        diff (diff-count-set (+ (get-diff-count num-diff)
+                                (get-diff-count denom-diff)))]
+    (if diff
+      (let [points #{(:ratio point-data1)
+                     (:ratio point-data2)}]
+        (conj connections-set
+              (with-meta points
+                {:diff diff
+                 :single-factor-diff? (<= diff 1)
+                 :num-diff num-diff
+                 :denom-diff denom-diff})))
       connections-set)))
 
 (defn combine-nodes [coords-data]
@@ -123,7 +131,9 @@
                    combine-nodes
                    (connect-nodes 2)
                    (map (fn [ratios]
-                          (map (comp :coords coords-data-map) ratios))))]
+                          (with-meta
+                            (map (comp :coords coords-data-map) ratios)
+                             (meta ratios)))))]
     {:period 2
      :min-x min-x
      :max-x max-x
@@ -132,4 +142,7 @@
      :data coords-data
      :edges edges}))
 
-#_(ratios->lattice-data base-coords '("1/1" "15/14" "5/4" "10/7" "3/2" "12/7"))
+(comment
+  (ratios->lattice-data base-coords  [3/2 9/8 2/1])
+  (ratios->lattice-data base-coords '("1/1" "15/14" "5/4" "10/7" "3/2" "12/7"))
+  :rcf)
