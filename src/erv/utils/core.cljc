@@ -63,5 +63,10 @@
 
 (defn indexes-of [el coll] (keep-indexed #(when (= el %2) %1) coll))
 
-(defn pow [n power]
-  (apply * (repeat power n)))
+(defn ^:export pow [n power]
+  (when-not (int? power)
+    (throw (ex-info "`power` must be an int" {:power power})))
+  (cond
+    (zero? power) 1
+    (> power 0) (apply * (repeat power n))
+    :else (apply / 1 (repeat (abs power) n))))
