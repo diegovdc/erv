@@ -37,9 +37,9 @@
    (let [divisions (apply + pattern)
          edo (edo-ratios divisions period)
          degrees (pattern->degrees pattern)]
-     {:edo/pattern pattern
-      :edo/divisions divisions
-      :edo/period period
+     {:meta {:edo/pattern pattern
+             :edo/divisions divisions
+             :edo/period period}
       :scale (map-indexed (fn [index degree]
                             {:edo/original-degree degree
                              :edo/degree index

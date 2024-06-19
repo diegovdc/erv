@@ -1,11 +1,11 @@
-(ns erv.edo.molt
+(ns erv.edo.mlt
   "Modes of limited transposition"
   (:require [erv.utils.core :as utils]
             [clojure.math.combinatorics :as combo]))
 
 (do
-  (defn motl-for-factor
-    ([edo-size factor] (motl-for-factor edo-size factor false))
+  (defn mlt-for-factor
+    ([edo-size factor] (mlt-for-factor edo-size factor false))
     ([edo-size factor permutations?]
      (let [unit-reps (/ edo-size factor)
            get-permutations (if permutations?
@@ -77,6 +77,45 @@
        segments))
 
 (from-segments 12 [[1 2] [1 1 1 3]])
+
+
+
+(comment
+  ;; TODO move to tieminos
+  (require '[erv.edo.core :as edo]
+           '[clojure.string :as str]
+           '[erv.scale.scl :as scl]
+           '[erv.utils.core :as utils]
+           '[clojure.java.io :as io])
+
+  (defn add-scl-filename
+    [scale-data]
+    (let [{:keys [edo/pattern edo/divisions]} (-> scale-data :meta)
+          name* (format "%sEDO MLT %s" divisions (str/join "-" pattern))
+          description (format "%s tone mode of limited transposition (MLT) of %sEDO with intervalic pattern %s"
+                              (count pattern)
+                              divisions
+                              (str pattern))]
+      (-> scale-data
+          (assoc-in [:meta :scl/name] name*)
+          (assoc-in [:meta :scl/description] description))
+
+      ))
+
+  (count (make 46))
+  (let [files (->> (make 18)
+                   (mapcat utils/get-all-rotations)
+                   set
+                   (map edo/from-pattern)
+                   (map add-scl-filename)
+                   (map scl/make-scl-file)
+                   )]
+    (doseq [{:keys [filename content]} files]
+      (let [file-name (str/replace filename #" " "_")
+            path (format "/Users/diego/Music/tunings/MTL/18EDO/%s.scl" file-name)]
+        (io/make-parents path)
+        (spit path content))))
+  )
 
 (comment
   ;; ways to explore motl in heigher edos

@@ -119,4 +119,8 @@
 (comment
   (write-archive-json "src/archive/scala-archive.json")
   (write-archive-edn "src/archive/scala-archive.edn")
-  (clojure.edn/read-string (slurp "src/archive/scala-archive.edn")))
+  (def archive (clojure.edn/read-string (slurp "src/archive/scala-archive.edn")))
+  (->> archive
+       (filter #(try (or (str/includes? (:filename (:meta %)) "shur")
+                         (str/includes? (:description (:meta %)) "shur"))
+                     (catch Exception _ nil)))))

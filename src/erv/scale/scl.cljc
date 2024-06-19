@@ -3,10 +3,11 @@
   #?@
   (:clj
    [(:require
+     [clojure.java.io :refer [make-parents]]
      [clojure.spec.alpha :as spec]
      [clojure.string :as str]
-     [erv.utils.conversions :as conv]
-     [erv.meru.core :as meru])]
+     [erv.meru.core :as meru]
+     [erv.utils.conversions :as conv])]
    :cljs
    [(:require
      [clojure.spec.alpha :as spec]
@@ -76,11 +77,21 @@
                           period
                           made-with)}))
 
+(defn get-standard-description [scale-data]
+  (let [{:keys [scl/name scl/description]} (:meta scale-data)]
+    {:name name
+     :description description}))
+
 (defn get-description-data [scale-data]
-  (case (-> scale-data :meta :scale)
-    :cps (get-cps-meta-description scale-data)
-    :meru (get-meru-meta-description scale-data)
-    {:name "unkown.scl" :description ""}))
+  (let [scale-type (-> scale-data :meta :scale)
+        standard-description? (or  (:scl/name (:meta scale-data))
+                                   (:scl/description (:meta scale-data)))]
+
+    (cond
+      standard-description? (get-standard-description scale-data)
+      (= :cps scale-type) (get-cps-meta-description scale-data)
+      (= :meru scale-type) (get-meru-meta-description scale-data)
+      :else {:name "unkown.scl" :description ""})))
 
 (defn format-ratio [ratio]
   #?(:clj
@@ -98,11 +109,11 @@
 (defn format-scale-for-scl [scale]
   (->> scale
        (map
-        #(merge %
-                (+bounded-ratio-str
-                 (if (-> % :bounded-ratio (= 1))
-                   (assoc % :bounded-ratio (% :bounding-period))
-                   %))))
+         #(merge %
+                 (+bounded-ratio-str
+                   (if (-> % :bounded-ratio (== 1))
+                     (assoc % :bounded-ratio (% :bounding-period))
+                     %))))
        (sort-by :bounded-ratio)))
 
 (defn make-scl-file [scale-data]
@@ -113,6 +124,13 @@
     {:filename name
      :content (format "! %s\n!\n%s\n %s\n!\n%s" name description size pitches)}))
 
+(defn ^:export spit-file
+  [filepath scale-data]
+  #?(:clj
+     (do (make-parents filepath)
+       (spit filepath (:content (make-scl-file scale-data))))
+     :cljs (throw (js/Error. "Cannot spit file in JS, use make-scl-file instead"))))
+
 (comment
   (require '[erv.cps.core :as cps]
            '[erv.meru.core :as meru]
@@ -120,7 +138,6 @@
   (edo/from-pattern [4,8,1,4,5,4,8,1,8,1,4,5])
   (cps/make 2 [1 3 5 7] :norm-fac 7)
   (count meru/test1)
-  (nth meru/test1 )
   (get-cps-meta-description (cps/make 2 [1 3 5 7]))
 
   (first meru/test1)
@@ -139,4 +156,18 @@
   (spit "/home/diego/Desktop/polydori.scl"
         (:content (make-scl-file (cps/make 4 [1 3 9 19 15 21 7] :norm-fac (* 15 21 19 9)) )))
   (spit "53edo-secondary-mos.scl"
-        (:content (make-scl-file (edo/from-pattern [4,8,1,4,5,4,8,1,8,1,4,5])))))
+        (:content (make-scl-file (edo/from-pattern [4,8,1,4,5,4,8,1,8,1,4,5]))))
+
+  (spit-file
+    "/Users/diego/Music/tunings/7-11.scl"
+    {:scale [{:ratio 1, :bounded-ratio 1, :bounding-period 2}
+             {:ratio 128/121, :bounded-ratio 128/121, :bounding-period 2}
+             {:ratio 8/7, :bounded-ratio 8/7, :bounding-period 2}
+             {:ratio 77/64, :bounded-ratio 77/64, :bounding-period 2}
+             {:ratio 14/11, :bounded-ratio 14/11, :bounding-period 2}
+             {:ratio 11/8, :bounded-ratio 11/8, :bounding-period 2}
+             {:ratio 16/11, :bounded-ratio 16/11, :bounding-period 2}
+             {:ratio 11/7, :bounded-ratio 11/7, :bounding-period 2}
+             {:ratio 128/77, :bounded-ratio 128/77, :bounding-period 2}
+             {:ratio 7/4, :bounded-ratio 7/4, :bounding-period 2}
+             {:ratio 121/64, :bounded-ratio 121/64, :bounding-period 2}]}))
