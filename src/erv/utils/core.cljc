@@ -17,10 +17,10 @@
   (let [factor (Math/pow 10 precision)]
     (/ (Math/round (* d factor)) factor)))
 
-(defn rotate [a n]
-  (let [l (count a)
+(defn rotate [xs n]
+  (let [l (count xs)
         off (mod (+ (mod n l) l) l)]
-    (concat (drop off a) (take off a))))
+    (concat (drop off xs) (take off xs))))
 
 (defn get-all-rotations [pattern]
   (mapv #(into [] (rotate pattern %))
@@ -70,3 +70,23 @@
     (zero? power) 1
     (> power 0) (apply * (repeat power n))
     :else (apply / 1 (repeat (abs power) n))))
+
+
+(defn pattern->indexes
+  [pattern]
+  (->> pattern
+       (reduce (fn [acc el] (conj acc (+ el (last acc))))
+               [0])
+       drop-last))
+
+(defn pick-pattern
+  "Create a subscale using a pattern (MOS or other)"
+  [scale pattern]
+  (let [indexes (pattern->indexes pattern)]
+    (reduce
+      (fn [subscale i]
+        (if-let [note (nth scale i nil)]
+          (conj subscale note)
+          (reduced subscale)))
+      []
+      indexes)))
