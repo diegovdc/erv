@@ -1,6 +1,7 @@
 (ns erv.utils.core
-  (:require [clojure.set :as set]
-            [clojure.spec.alpha :as s]))
+  (:require
+   [clojure.set :as set]
+   [clojure.spec.alpha :as s]))
 
 (defn validate [spec input]
   (or (s/valid? spec input)
@@ -90,37 +91,28 @@
      []
      indexes)))
 
-(defn degree-stack
-  "Generate a stack of degrees from a single generator"
-  [{:keys [scale gen offset]}]
-  (sort-by :gen/index
-           (loop
-            [subset #{}
-             ratio-subset #{}
-             offset offset
-             gen-index 0]
-             (let [i (mod offset (count scale))
-                   new-note (assoc (nth scale i)
-                                   :gen/index gen-index)
-                   ratio (:bounded-ratio new-note)]
-               (if (ratio-subset ratio)
-                 subset
-                 (recur (conj subset new-note)
-                        (conj ratio-subset ratio)
-                        (+ offset gen)
-                        (inc gen-index)))))))
+;; TODO add tests
+(defn gcd
+  "Greatest common divisor"
+  [a b]
+  (if (zero? b)
+    a
+    (recur b (mod a b))))
 
-(defn scale-intervals
-  "Get the intervals of a scale"
-  [scale]
-  (let [sorted-scale (->> scale
-                          (sort-by :bounded-ratio))
-        last-interval [(last sorted-scale)
-                       (update (first sorted-scale)
-                               :bounded-ratio #(* % (:bounding-period (first sorted-scale))))]]
-    (->> sorted-scale
-         (partition 2 1)
-         (into [])
-         (#(conj % last-interval))
-         (map (fn [[a b]] (interval (:bounded-ratio a)
-                                    (:bounded-ratio b)))))))
+;; TODO add tests
+(defn lcm
+  "Least common multiple"
+  [a b]
+  (/ (* a b) (gcd a b)))
+
+;; TODO add tests
+(defn lcm-of-list
+  "Find the least common multiple of a list of numbers"
+  [nums]
+  (reduce lcm nums))
+
+;; TODO add tests
+(defn gcd-of-list
+  "Find the greatest common divisor of a list of numbers"
+  [nums]
+  (reduce gcd nums))

@@ -6,7 +6,8 @@
       [clojure.string :as str]
       [com.gfredericks.exact :as e]
       [erv.utils.conversions :as conv]
-      [erv.utils.core :refer [interval period-reduce prime-factors round2]])]
+      [erv.utils.core :refer [gcd-of-list interval period-reduce prime-factors
+                              round2]])]
     :cljs
     [(:require
       [clojure.string :as str]
@@ -142,3 +143,46 @@
                   :bounded-ratio ratio
                   :bounding-period period})))
         (sort-by :bounded-ratio))))
+
+
+(defn ratios-intervals
+  "Get the intervals between the ratios in the sequence.
+  To get a wrapped version as in a scale use `scale-intervals`"
+  [ratios]
+  (->> ratios
+       (partition 2 1)
+       (map #(apply interval %))))
+
+(defn interval-seq->ratio-stack
+  [interval-seq size]
+  (loop [ratios [1]
+         index 0]
+    (if (= size (count ratios))
+      ratios
+      (recur (conj ratios (* (last ratios)
+                             (nth interval-seq (mod index (count interval-seq)))))
+             (inc index)))))
+
+(defn normalize-ratios
+  "Will return a vector of ratios sorted and normalized so that the smallest one is 1/1."
+  ([ratios] (normalize-ratios nil ratios)
+            (let [min* (apply min ratios)]
+              (->> ratios sort (map #(/ % min*)))))
+  ([period ratios]
+   (let [min* (apply min ratios)
+         ratios* (->> ratios sort (map #(/ % min*)))]
+     (if period
+       (map #(period-reduce period %) ratios*)
+       ratios*))))
+
+
+
+(defn ratios->harmonic-series
+  [ratios]
+  #?(:clj
+     (let [denominators (map (fn [r] (if (int? r) r (denominator r))) ratios)
+           anti-denom (apply * denominators)
+           harmonics (map #(* anti-denom %) ratios)
+           gcd (gcd-of-list harmonics)]
+       (map #(/ % gcd) harmonics))
+     :cljs (throw (js/Error (str "ratios->harmonic-series not implemented, cannot process:" ratios)))))
