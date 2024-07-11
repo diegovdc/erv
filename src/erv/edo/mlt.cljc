@@ -20,8 +20,6 @@
             (map #(flatten (repeat unit-reps %)))))))
   #_(motl-for-factor 12 3))
 
-
-
 (defn partition-factor [factor]
   (->> (combo/partitions (repeat factor 1) :min 1 :max (dec factor))
        (map (partial map (partial apply +)))))
@@ -61,7 +59,7 @@
   #_(segments 210 :permutations? true))
 
 (defn make [edo-size & {:keys [permutations? factors]
-                        :or {permutations? true}} ]
+                        :or {permutations? true}}]
   (->> (segments edo-size
                  :permutations? permutations?
                  :factors factors)
@@ -73,12 +71,10 @@
 (defn from-segments [edo-size segments]
   (map (fn [seg]
          (let [reps (/ edo-size (apply + seg))]
-           (flatten (repeat reps seg))    ))
+           (flatten (repeat reps seg))))
        segments))
 
 (from-segments 12 [[1 2] [1 1 1 3]])
-
-
 
 (comment
   ;; TODO move to tieminos
@@ -91,16 +87,14 @@
   (defn add-scl-filename
     [scale-data]
     (let [{:keys [edo/pattern edo/divisions]} (-> scale-data :meta)
-          name* (format "%sEDO MLT %s" divisions (str/join "-" pattern))
+          name* (format "%sEDO MLT %st %s" divisions (count pattern) (str/join "-" pattern))
           description (format "%s tone mode of limited transposition (MLT) of %sEDO with intervalic pattern %s"
                               (count pattern)
                               divisions
                               (str pattern))]
       (-> scale-data
           (assoc-in [:meta :scl/name] name*)
-          (assoc-in [:meta :scl/description] description))
-
-      ))
+          (assoc-in [:meta :scl/description] description))))
 
   (count (make 46))
   (let [files (->> (make 18)
@@ -108,14 +102,12 @@
                    set
                    (map edo/from-pattern)
                    (map add-scl-filename)
-                   (map scl/make-scl-file)
-                   )]
+                   (map scl/make-scl-file))]
     (doseq [{:keys [filename content]} files]
       (let [file-name (str/replace filename #" " "_")
             path (format "/Users/diego/Music/tunings/MTL/18EDO/%s.scl" file-name)]
         (io/make-parents path)
-        (spit path content))))
-  )
+        (spit path content)))))
 
 (comment
   ;; ways to explore motl in heigher edos
@@ -149,11 +141,10 @@
       (->> (range 0 edo-size factor)
            (mapcat
             (fn [degree] (map
-                         (fn [interval] (mod (+ degree interval) edo-size))
-                         chord)))
+                          (fn [interval] (mod (+ degree interval) edo-size))
+                          chord)))
            sort
            dedupe
            (partition 2 1)
-           (map (fn [[a b]] (- b a)))
-           ))
+           (map (fn [[a b]] (- b a)))))
     (from-chord 24 8 [0 7 14 18])))
