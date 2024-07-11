@@ -71,8 +71,7 @@
     (> power 0) (apply * (repeat power n))
     :else (apply / 1 (repeat (abs power) n))))
 
-
-(defn pattern->indexes
+(defn pattern->degrees
   [pattern]
   (->> pattern
        (reduce (fn [acc el] (conj acc (+ el (last acc))))
@@ -82,11 +81,46 @@
 (defn pick-pattern
   "Create a subscale using a pattern (MOS or other)"
   [scale pattern]
-  (let [indexes (pattern->indexes pattern)]
+  (let [indexes (pattern->degrees pattern)]
     (reduce
-      (fn [subscale i]
-        (if-let [note (nth scale i nil)]
-          (conj subscale note)
-          (reduced subscale)))
-      []
-      indexes)))
+     (fn [subscale i]
+       (if-let [note (nth scale i nil)]
+         (conj subscale note)
+         (reduced subscale)))
+     []
+     indexes)))
+
+(defn degree-stack
+  "Generate a stack of degrees from a single generator"
+  [{:keys [scale gen offset]}]
+  (sort-by :gen/index
+           (loop
+            [subset #{}
+             ratio-subset #{}
+             offset offset
+             gen-index 0]
+             (let [i (mod offset (count scale))
+                   new-note (assoc (nth scale i)
+                                   :gen/index gen-index)
+                   ratio (:bounded-ratio new-note)]
+               (if (ratio-subset ratio)
+                 subset
+                 (recur (conj subset new-note)
+                        (conj ratio-subset ratio)
+                        (+ offset gen)
+                        (inc gen-index)))))))
+
+(defn scale-intervals
+  "Get the intervals of a scale"
+  [scale]
+  (let [sorted-scale (->> scale
+                          (sort-by :bounded-ratio))
+        last-interval [(last sorted-scale)
+                       (update (first sorted-scale)
+                               :bounded-ratio #(* % (:bounding-period (first sorted-scale))))]]
+    (->> sorted-scale
+         (partition 2 1)
+         (into [])
+         (#(conj % last-interval))
+         (map (fn [[a b]] (interval (:bounded-ratio a)
+                                    (:bounded-ratio b)))))))
