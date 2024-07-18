@@ -48,10 +48,9 @@
      {:meta {:scale :tritriadic
              :triad-ratios triad-ratios}
       :scale  (ratios->scale period
-                      (map #(* (last triad-ratios) %)
-                           (interval-seq->ratio-stack
-                             (ratios-intervals triad-ratios) 7)))})))
-
+                             (map #(* (last triad-ratios) %)
+                                  (interval-seq->ratio-stack
+                                   (ratios-intervals triad-ratios) 7)))})))
 
 (defn scale->stacked-subscale
   "Make a scale from a stack of generator steps from a parent scale.
@@ -73,3 +72,16 @@
             :gen gen
             :starting-offset offset}
      :scale scale}))
+
+(defn dedupe-scale
+  "Remove duplicate notes from a scale. Uses `:bounded-ratio`"
+  [scale]
+  (->> scale
+       (reduce (fn [{:keys [scale ratios] :as acc} note]
+                 (if (ratios (:bounded-ratio note))
+                   acc
+                   {:scale (conj scale note)
+                    :ratios (conj ratios (:bounded-ratio note))}))
+               {:scale []
+                :ratios #{}})
+       :scale))

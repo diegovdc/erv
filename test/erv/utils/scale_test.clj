@@ -3,7 +3,7 @@
    [clojure.test :refer [deftest is testing]]
    [erv.edo.core :as edo]
    [erv.utils.ratios :refer [ratios->scale]]
-   [erv.utils.scale :refer [degree-stack scale->stacked-subscale
+   [erv.utils.scale :refer [dedupe-scale degree-stack scale->stacked-subscale
                             scale-intervals tritriadic]]))
 
 (deftest degree-stack-test
@@ -76,3 +76,12 @@
                                         :size 4})
               :scale
               (map :bounded-ratio)))))
+
+(deftest dedupe-scale-test
+  (is (= [{:bounded-ratio 1}
+          {:bounded-ratio 5/4}
+          {:bounded-ratio 3/2}]
+         (dedupe-scale [{:bounded-ratio 1}
+                        {:bounded-ratio 5/4}
+                        {:bounded-ratio 3/2}
+                        {:bounded-ratio 3/2}]))))
