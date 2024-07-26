@@ -79,6 +79,10 @@
                [0])
        drop-last))
 
+(defn pick-degrees
+  [scale degrees]
+  (map #(wrap-at % scale) degrees))
+
 (defn pick-pattern
   "Create a subscale using a pattern (MOS or other)"
   [scale pattern]
