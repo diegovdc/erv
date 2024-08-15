@@ -19,14 +19,10 @@
        count
        (+ ignore-first)))
 
-
-
 (def scale-formulas
   {:fibonacci {:i1 1 :i2 2 :f +}
    :meta-pelog {:i1 1 :i2 3 :f +}
    :meta-slendro {:i1 2 :i2 3 :f +}})
-
-
 
 (defn recurrent-series
   "Creates a recurrent integer sequence and some data associated to it.
@@ -48,10 +44,10 @@
   (let [config* (get scale-formulas formula config)
         {:keys [i1 i2 f] :or {f +}} config*
         seed*  (mapv bigint seed)
-        _ (when (> i1 (count seed))
-            (throw (ex-info "The `seed` size must be equal or greater than `i1`" config)))
+        _ (when (> i2 (count seed))
+            (throw (ex-info "The `seed` size must be equal or greater than `i1`" config*)))
         _ (when (>= i1 i2)
-            (throw (ex-info "`i2` must be greater than `i1`" config)))
+            (throw (ex-info "`i2` must be greater than `i1`" config*)))
         series (loop [seq* seed*
                       a (first (take-last i1 seed))
                       b (first (take-last i2 seed))]
@@ -63,18 +59,15 @@
                      (recur seq** a* b*))))]
     {:convergence (last (seq-ratios series))
      :converges-at (converges-at series)
-     :seq series}))
+     :series series}))
 
 (comment
-
-
   (recurrent-series #_{:seed [1 1 1]
                        :i1 2
                        :i2 3
                        :f (fn [a b] (+ a b))}
-                    {:seed [1 1 1]
-                     :formula :meta-slendro}))
-
+   {:seed [1 1 1]
+    :formula :meta-slendro}))
 
 (defn within-period [period seq*]
   (let [max* (apply max seq*)
@@ -91,9 +84,9 @@
       (let [seed [1 1 1]
             period 2]
         (->> (recurrent-series (mapv bigint seed)
-                            :i1 3
-                            :i2 2
-                            :f (fn [a b] (+ a b)))
+                               :i1 3
+                               :i2 2
+                               :f (fn [a b] (+ a b)))
              (partition 9 1)
              (map (fn [seq*]
                     (let [seq** (sort (set (map (partial within-bounding-period period)
@@ -132,10 +125,10 @@
       (let [seed [1 1]
             period 2]
         (->> (recurrent-series (mapv bigint seed)
-                            :i1 1
-                            :i2 2
+                               :i1 1
+                               :i2 2
                             ;; :f (fn [a b] (+ a b))
-                            )
+                               )
              (partition 21 1)
              (map (fn [seq*]
                     (let [seq** (sort (set (map (partial within-bounding-period period)
