@@ -19,29 +19,62 @@
        count
        (+ ignore-first)))
 
-(do
-  (defn recurrent-seq [seed & {:keys [i1 i2 f]
-                               :or {f (fn [a b] (+ a b))}}]
-    (let [seed* (vec seed)]
-      (loop [seq* seed*
-             a (first (take-last i1 seed))
-             b (first (take-last i2 seed))]
-        (let [seq** (conj seq* (f a b))
-              a* (first (take-last i1 seq**))
-              b* (first (take-last i2 seq**))]
-          (if (apply = (seq-ratios (take-last 6 seq**)))
-            seq**
-            (recur seq** a* b*))))))
-  (let [r (recurrent-seq (map bigint [1 1 1 2 3 4 5 6])
-                         :i1 6
-                         :i2 7
-                         :f (fn [a b] (+ a b))
-                         :seq-len 40)]
-    {:convergence (last (seq-ratios r))
-     :converges-at (converges-at r)
-     :seq r})
 
-  )
+
+(def scale-formulas
+  {:fibonacci {:i1 1 :i2 2 :f +}
+   :meta-pelog {:i1 1 :i2 3 :f +}
+   :meta-slendro {:i1 2 :i2 3 :f +}})
+
+
+
+(defn recurrent-series
+  "Creates a recurrent integer sequence and some data associated to it.
+  Config:
+      `:seed` A sequence of intergers to start the recurrent sequence.
+      `:formula` A keyword that should be contained in `scale-formulas`. It automatically provides the arguments below, so can be used in place of these.
+    In case no `:formula` is used:
+      `:i1` The lowest index in the formula. - If this is confusing, read below.
+      `:i2` The next index in the formula.
+      `:f` The function to apply to these indexes (probably always, it will be +)
+
+
+  For example on page 40 of https://anaphoria.com/merufour.pdf there is the Meta-Slendro formula:
+  Hn-3 + Hn-2 = Hn
+
+  `:i1` corresponds to 3, taken from Hn-3
+  `:i2` corresponds to 2, taken from Hn-2."
+  [{:keys [seed formula] :as config}]
+  (let [config* (get scale-formulas formula config)
+        {:keys [i1 i2 f] :or {f +}} config*
+        seed*  (mapv bigint seed)
+        _ (when (> i1 (count seed))
+            (throw (ex-info "The `seed` size must be equal or greater than `i1`" config)))
+        _ (when (>= i1 i2)
+            (throw (ex-info "`i2` must be greater than `i1`" config)))
+        series (loop [seq* seed*
+                      a (first (take-last i1 seed))
+                      b (first (take-last i2 seed))]
+                 (let [seq** (conj seq* (f a b))
+                       a* (first (take-last i1 seq**))
+                       b* (first (take-last i2 seq**))]
+                   (if (apply = (seq-ratios (take-last 6 seq**)))
+                     seq**
+                     (recur seq** a* b*))))]
+    {:convergence (last (seq-ratios series))
+     :converges-at (converges-at series)
+     :seq series}))
+
+(comment
+
+
+  (recurrent-series #_{:seed [1 1 1]
+                       :i1 2
+                       :i2 3
+                       :f (fn [a b] (+ a b))}
+                    {:seed [1 1 1]
+                     :formula :meta-slendro}))
+
 
 (defn within-period [period seq*]
   (let [max* (apply max seq*)
@@ -57,7 +90,7 @@
     (def test1
       (let [seed [1 1 1]
             period 2]
-        (->> (recurrent-seq (mapv bigint seed)
+        (->> (recurrent-series (mapv bigint seed)
                             :i1 3
                             :i2 2
                             :f (fn [a b] (+ a b)))
@@ -98,7 +131,7 @@
     (def test1
       (let [seed [1 1]
             period 2]
-        (->> (recurrent-seq (mapv bigint seed)
+        (->> (recurrent-series (mapv bigint seed)
                             :i1 1
                             :i2 2
                             ;; :f (fn [a b] (+ a b))
