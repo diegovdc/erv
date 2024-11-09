@@ -3,6 +3,11 @@
             [erv.cps.core :refer [within-bounding-period]]
             [erv.constant-structures.graphics :as sketch]))
 
+(defn seq-ratios* [recurrent-seq]
+  (->> recurrent-seq
+       (partition 2 1)
+       (map (fn [[a b]] (/ b a)))))
+
 (defn seq-ratios [recurrent-seq]
   (->> recurrent-seq
        (partition 2 1)
@@ -37,7 +42,7 @@
 
   For example on page 40 of https://anaphoria.com/merufour.pdf there is the Meta-Slendro formula:
   Hn-3 + Hn-2 = Hn
-
+  TODO this may be mixed up... but the test function  with the `:meta-slendro` `:formula` does works.... so review is needed
   `:i1` corresponds to 3, taken from Hn-3
   `:i2` corresponds to 2, taken from Hn-2."
   [{:keys [seed formula] :as config}]
@@ -57,7 +62,8 @@
                    (if (apply = (seq-ratios (take-last 6 seq**)))
                      seq**
                      (recur seq** a* b*))))]
-    {:convergence (last (seq-ratios series))
+    {:convergence-double (last (seq-ratios series))
+     :convergence (last (seq-ratios* series))
      :converges-at (converges-at series)
      :series series}))
 
