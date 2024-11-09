@@ -3,7 +3,8 @@
         org.clojure/clojurescript {:mvn/version "1.11.60"}
         com.google.javascript/closure-compiler-unshaded {:mvn/version "v20221102"}
         org.clojure/math.combinatorics {:mvn/version "0.1.6"}
-        org.clojars.videco/time-time {:local/root "../time-tiem" :deps/manifest :deps}
+        io.github.diegovdc/time-time {:git/url "https://github.com/diegovdc/time-time.git"
+                                      :sha "29e04abec1fc290c162e34a18db57ef5ac33d3e6"}
         ;; overtone/overtone {:local/root "../overtone" :deps/manifest :deps}
         com.taoensso/timbre {:mvn/version "4.10.0"}
         quil/quil {:mvn/version "4.0.0-SNAPSHOT"}
