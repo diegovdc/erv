@@ -3,7 +3,8 @@
    [clojure.test :refer [deftest is testing]]
    [erv.lattice.v2 :refer [base-coords combine-nodes connect-nodes
                            get-point-data-difference make-connection
-                           ratio->lattice-point ratios->lattice-data ref-ratio-in-ratio-edges?]]))
+                           ratio->lattice-point ratios->lattice-data
+                           ref-ratio-in-ratio-edges? swap-coords]]))
 
 (deftest get-point-data-difference-test
   (is (= {3 2, 5 0}
@@ -67,12 +68,14 @@
     (is (= [{:diff 1
              :single-factor-diff? true
              :num-diff {5 1}
+             :custom-connection nil
              :denom-diff {}}
             {:diff 2
              :single-factor-diff? false
+             :custom-connection nil
              :num-diff {3 2}
              :denom-diff {}}]
-           (map meta (:edges (ratios->lattice-data base-coords  [5/4 9/8 2/1])))))))
+           (map meta (:edges (ratios->lattice-data base-coords [5/4 9/8 2/1])))))))
 
 (deftest combine-nodes-test
   (is (= {{:ratio 3/2
@@ -130,7 +133,22 @@
             (combine-nodes
              (->> [2 9/8 5/4 25/16]
                   (map #(ratio->lattice-point % base-coords))
-                  (into {}))))))))
+                  (into {}))))))
+    (is (= #{#{2 5/4} #{5/4 25/16} #{9/8 2}}
+           (connect-nodes
+            2
+            (combine-nodes
+             (->> [2 9/8 5/4 25/16]
+                  (map #(ratio->lattice-point % base-coords))
+                  (into {}))))))
+    (is (= #{#{3/2 2} #{3/2 15/8} #{2 15/8}}
+           (connect-nodes
+            2
+            (combine-nodes
+             (->> [2 3/2 15/8]
+                  (map #(ratio->lattice-point % base-coords))
+                  (into {})))
+            {:custom-edges #{15/8}})))))
 
 (deftest make-connection-test
   (testing "Can connect nodes at a factor difference greater than 1"
@@ -149,7 +167,8 @@
                              :denominator 8
                              :numer-factors [3 3]
                              :denom-factors [2 2 2]
-                             :coords {:x 80, :y 0}}))))
+                             :coords {:x 80, :y 0}}
+                            #{}))))
   (testing "Will not connect nodes if factor difference is greater than stated"
     (is (= #{}
            (make-connection #{0 1}
@@ -166,7 +185,8 @@
                              :denominator 4,
                              :numer-factors [5 5],
                              :denom-factors [2 2],
-                             :coords {:x 0, :y -80}})))))
+                             :coords {:x 0, :y -80}}
+                            #{})))))
 
 (deftest ref-ratio-in-ratio-edges?-test
   (is (true? (ref-ratio-in-ratio-edges? 3/2 #{#{3/2 9/8} #{3/2 2}})))

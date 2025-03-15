@@ -1,6 +1,6 @@
 (ns erv.lattice.v2
   (:require
-   [clojure.math.combinatorics :as combo]
+   [erv.utils.core :refer [period-reduce]]
    [erv.utils.ratios :refer [analyze-ratio]]))
 
 (def base-coords
@@ -37,6 +37,9 @@
             :denom-factors denom-factors
             :coords (make-coords base-coords numer-factors denom-factors)}}))
 
+(comment
+  (ratio->lattice-point))
+
 (defn get-point-data-difference
   "`factor-type` should be `:numer-factors` or `:denom-factors`"
   [period point-data1 point-data2 factor-type]
@@ -49,28 +52,89 @@
                                     (ratio-freqs2 factor 0)))))
             {}
             factors-set)))
+(comment
+  (get-point-data-difference
+   2
+   {:ratio 15/8, :numerator 15, :denominator 8, :numer-factors [3 5], :denom-factors [2 2 2], :coords {:x 40, :y -40}}
+   {:ratio 2, :numerator 2, :denominator 1, :numer-factors [2], :denom-factors [], :coords {:x 0, :y 0}}
+   :numer-factors))
+
+(defn custom-connection?
+  [period point-data1 point-data2 custom-edges]
+  (let [r1 (->> point-data1 :ratio (period-reduce period))
+        r2 (->> point-data2 :ratio (period-reduce period))]
+    (custom-edges
+     (period-reduce period (/ r1 r2)))))
+
+(comment
+  (custom-connection?
+   2
+   {:ratio 15/8
+    :numerator 15
+    :denominator 8
+    :numer-factors [3 5]
+    :denom-factors [2 2 2]
+    :coords {:x 40 :y -40}}
+   {:ratio 2
+    :numerator 2
+    :denominator 1
+    :numer-factors [2]
+    :denom-factors []
+    :coords {:x 0 :y 0}}
+   #{15/8}))
 
 (defn make-connection
-  [diff-count-set connections-set period point-data1 point-data2]
+  [diff-count-set connections-set period point-data1 point-data2 custom-edges]
+  #_(println period point-data1 point-data2)
   (let [diffs (partial get-point-data-difference
-                                      period
-                                      point-data1
-                                      point-data2)
+                       period
+                       point-data1
+                       point-data2)
         get-diff-count (comp #(apply + %) vals)
         num-diff  (diffs :numer-factors)
         denom-diff (diffs :denom-factors)
         diff (diff-count-set (+ (get-diff-count num-diff)
-                                (get-diff-count denom-diff)))]
-    (if diff
+                                (get-diff-count denom-diff)))
+        custom? (custom-connection? period point-data1 point-data2 custom-edges)]
+    (println diff)
+    (if (or diff custom?)
       (let [points #{(:ratio point-data1)
                      (:ratio point-data2)}]
         (conj connections-set
               (with-meta points
                 {:diff diff
-                 :single-factor-diff? (<= diff 1)
+                 :single-factor-diff? (boolean (or (when diff (<= diff 1))
+                                                   custom?))
+                 :custom-connection custom?
                  :num-diff num-diff
                  :denom-diff denom-diff})))
       connections-set)))
+
+(comment
+  (make-connection
+   #{0 1}
+   #{#{3/2 2} #{3/2 15/8}}
+   2
+   {:ratio 15/8
+    :numerator 15
+    :denominator 8
+    :numer-factors [3 5]
+    :denom-factors [2 2 2]
+    :coords {:x 40 :y -40}}
+   {:ratio 2
+    :numerator 2
+    :denominator 1
+    :numer-factors [2]
+    :denom-factors []
+    :coords {:x 0 :y 0}}
+   #{15/8})
+  (connect-nodes
+   2
+   (combine-nodes
+    (->> [2 3/2 15/8]
+         (map #(ratio->lattice-point % base-coords))
+         (into {})))
+   {:custom-edges #{15/8}}))
 
 (defn combine-nodes [coords-data]
   (->> (for [[r1 d1] coords-data
@@ -90,7 +154,9 @@
        boolean))
 
 (defn connect-nodes
-  [period combined-nodes]
+  [period combined-nodes
+   & {:keys [custom-edges]
+      :or {custom-edges #{}}}]
   (loop [combined-nodes* combined-nodes
          edges #{}
          distances-set #{0 1}]
@@ -104,7 +170,8 @@
                                               edges*
                                               period
                                               ref-node
-                                              node))
+                                              node
+                                              custom-edges))
                            edges
                            ns)]
         (if
@@ -116,33 +183,48 @@
 
 (defn ^:export ratios->lattice-data
   "NOTE in ClojureScript `ratios` is a list of ratios as strings"
-  [base-coords ratios]
-  (let [coords-data-map (->> ratios
-                             (map #(ratio->lattice-point % base-coords))
-                             (into {}))
-        coords-data (vals coords-data-map)
-        coords (->> coords-data
-                    (map :coords))
-        min-x (->> coords (map :x) (apply min))
-        max-x (->> coords (map :x) (apply max))
-        min-y (->> coords (map :y) (apply min))
-        max-y (->> coords (map :y) (apply max))
-        edges (->> coords-data-map
-                   combine-nodes
-                   (connect-nodes 2)
-                   (map (fn [ratios]
-                          (with-meta
-                            (map (comp :coords coords-data-map) ratios)
+  ([base-coords ratios
+    & {:keys [custom-edges period]
+       :or {custom-edges #{}
+            period 2}}]
+   (let [coords-data-map (->> ratios
+                              (map #(ratio->lattice-point % base-coords))
+                              (into {}))
+         coords-data (vals coords-data-map)
+         coords (->> coords-data
+                     (map :coords))
+         min-x (->> coords (map :x) (apply min))
+         max-x (->> coords (map :x) (apply max))
+         min-y (->> coords (map :y) (apply min))
+         max-y (->> coords (map :y) (apply max))
+         edges (->> coords-data-map
+                    combine-nodes
+                    (#(connect-nodes period % {:custom-edges custom-edges}))
+                    (map (fn [ratios]
+                           (with-meta
+                             (map (comp :coords coords-data-map) ratios)
                              (meta ratios)))))]
-    {:period 2
-     :min-x min-x
-     :max-x max-x
-     :min-y min-y
-     :max-y max-y
-     :data coords-data
-     :edges edges}))
+     {:period period
+      :min-x min-x
+      :max-x max-x
+      :min-y min-y
+      :max-y max-y
+      :data coords-data
+      :edges edges})))
+
+(defn swap-coords
+  [coords coord-pairs]
+  (reduce (fn [coords [prime1 prime2]]
+            (assoc coords
+                   prime1 (coords prime2)
+                   prime2 (coords prime1)))
+          coords
+          coord-pairs))
 
 (comment
-  (ratios->lattice-data base-coords  [3/2 9/8 2/1])
+  (ratios->lattice-data base-coords 3 [3/2 9/8 2/1])
+  (ratios->lattice-data (swap-coords base-coords [[2 3]])
+                        3
+                        [1 3/2 9/8 2/1 3/1])
   (ratios->lattice-data base-coords '("1/1" "15/14" "5/4" "10/7" "3/2" "12/7"))
   :rcf)
