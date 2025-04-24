@@ -4,13 +4,14 @@
   Concepts:
    `G` = generating interval
    `C` = closing interval
-   `R` = reciprocal interval: R+C === 2*G
+   `R` = reciprocal interval: R+C = 2*G
   Rules:
-   0. Take a scale an represent it as a chain of generators.
-   1. Only sequences which contain n `G` intervals and exactly `C` interval are valid.
-   2. A pair of `G`s can generate a new interval plus `C`.
+   0. Take a scale and represent it as a chain of generators.
+   1. Only sequences which contain any number of `G` intervals and exactly one `C` interval are valid.
+   2. A consecutive pair of `G`s can be used to generate an  `R` and a `C` interval.
    3. These pairs can be permutated across the generator chain. Both together and each one on their own. All these permutations are valid.
-   4. `C` can not be next to `C`.
+   4. A `C` interval can not be next to another `C` interval.
+   5. Convert the resulting intervalic chains back into a scale representation.
 "
   (:require [erv.utils.core :as utils]))
 
