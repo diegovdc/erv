@@ -96,7 +96,6 @@
         diff (diff-count-set (+ (get-diff-count num-diff)
                                 (get-diff-count denom-diff)))
         custom? (custom-connection? period point-data1 point-data2 custom-edges)]
-    (println diff)
     (if (or diff custom?)
       (let [points #{(:ratio point-data1)
                      (:ratio point-data2)}]

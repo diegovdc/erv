@@ -144,7 +144,6 @@
                   :bounding-period period})))
         (sort-by :bounded-ratio))))
 
-
 (defn ratios-intervals
   "Get the intervals between the ratios in the sequence.
   To get a wrapped version as in a scale use `scale-intervals`"
@@ -174,8 +173,6 @@
      (if period
        (map #(period-reduce period %) ratios*)
        ratios*))))
-
-
 
 (defn ratios->harmonic-series
   [ratios]

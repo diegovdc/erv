@@ -60,7 +60,6 @@
        (filter number?)
        (drop 1))))                    ; drop scale size
 
-
 (defn- get-ratio [num]
   (if (or (int? num) (ratio? num))
     num
@@ -73,7 +72,7 @@
         ;; remove the period (last item) and add a 1 at the front
         ratios (conj (drop-last 1 ratios*) 1)]
     (map (fn [ratio] {:bounded-ratio ratio
-                     :bounding-period period})
+                      :bounding-period period})
          ratios)))
 
 (comment (parse-scale test-scale))
@@ -121,6 +120,6 @@
   (write-archive-edn "src/archive/scala-archive.edn")
   (def archive (clojure.edn/read-string (slurp "src/archive/scala-archive.edn")))
   (->> archive
-       (filter #(try (or (str/includes? (:filename (:meta %)) "shur")
-                         (str/includes? (:description (:meta %)) "shur"))
+       (filter #(try (or (str/includes? (:filename (:meta %)) "persian")
+                         (str/includes? (:description (:meta %)) "persian"))
                      (catch Exception _ nil)))))
