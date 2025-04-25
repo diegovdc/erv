@@ -1,6 +1,6 @@
 (ns erv.utils.scale
   (:require
-   [erv.utils.core :refer [interval]]
+   [erv.utils.core :refer [interval rotate]]
    [erv.utils.ratios :refer [interval-seq->ratio-stack normalize-ratios
                              ratios->scale ratios-intervals]]))
 
@@ -85,3 +85,11 @@
                {:scale []
                 :ratios #{}})
        :scale))
+
+(defn rotate-scale
+  [scale step]
+  (let [period (-> scale first :bounding-period)
+        ratios (map :bounded-ratio (rotate scale step))
+        first-ratio (first ratios)]
+    (ratios->scale period
+                   (->> ratios (map #(/ % first-ratio))))))
