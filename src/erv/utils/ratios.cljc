@@ -183,3 +183,9 @@
            gcd (gcd-of-list harmonics)]
        (map #(/ % gcd) harmonics))
      :cljs (throw (js/Error (str "ratios->harmonic-series not implemented, cannot process:" ratios)))))
+
+(defn gen-chain
+  "Create a chain of ratios starting from 1"
+  [length generator]
+  (->> (range length)
+       (map (fn [i] (apply * (repeat i generator))))))
