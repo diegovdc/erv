@@ -4,9 +4,8 @@
   :license {:name "GPL-3.0-or-later WITH Classpath-exception-2.0"
             :url "https://www.gnu.org/licenses/gpl-3.0.en.html#license-text"}
   :dependencies [[org.clojure/clojure "1.11.1"]
-                 [org.clojure/math.combinatorics "0.1.6"]
+                 [org.clojure/math.combinatorics "0.3.0"]
                  [org.clojure/data.json "2.4.0"]
-                 [org.clojars.videco/time-time "0.1.0-SNAPSHOT"]
                  [com.gfredericks/exact "0.1.11"]
                  [com.taoensso/timbre "4.10.0"]
                  [table "0.5.0"]
