@@ -1,6 +1,7 @@
 (ns erv.utils.scale
   (:require
-   [erv.utils.core :refer [interval rotate]]
+   [clojure.math.combinatorics :as combo]
+   [erv.utils.core :refer [interval period-reduce rotate wrap-at]]
    [erv.utils.ratios :refer [interval-seq->ratio-stack normalize-ratios
                              ratios->scale ratios-intervals]]))
 
@@ -87,9 +88,56 @@
        :scale))
 
 (defn rotate-scale
-  [scale step]
-  (let [period (-> scale first :bounding-period)
-        ratios (map :bounded-ratio (rotate scale step))
-        first-ratio (first ratios)]
-    (ratios->scale period
-                   (->> ratios (map #(/ % first-ratio))))))
+  [step scale]
+  (let [scale* (map-indexed (fn [i n]
+                              (cond-> (assoc n :rotated-scale/original-degree i)
+                                (:ratio n) (assoc :rotated-scale/original-ratio (:ratio n))))
+                            scale)
+        period (-> scale first :bounding-period)
+        rotation (rotate scale* step)
+        first-ratio (-> rotation first :bounded-ratio)]
+    (map (fn [n] (let [n* (update n :bounded-ratio (fn [r] (period-reduce period (/ r first-ratio))))]
+                   (if (:ratio n*)
+                     (assoc n* :ratio (:bounded-ratio n*))
+                     n*)))
+         rotation)))
+
+(defn cross-set
+  [period & ratios]
+  (let [scale (->> ratios
+                   (apply combo/cartesian-product)
+                   (map #(apply * %))
+                   flatten
+                   (ratios->scale period)
+                   dedupe-scale)]
+    {:meta {:scale :cross-set
+            :sets ratios
+            :size (count scale)
+            :period period}
+     :scale scale}))
+
+(defn find-subset-degrees
+  [{:keys [scale subset-ratios max-missing-notes]
+    :or {max-missing-notes 0}}]
+  (let [scale-rotations (map (fn [i] (rotate-scale i scale))
+                             (range (count scale)))
+        subset-set (set subset-ratios)]
+    (keep (fn [scale]
+            (let [subscale (keep (fn [n]
+                                   (when-let [matched-ratio (subset-set (:bounded-ratio n))]
+                                     (assoc n :matched-ratio matched-ratio)))
+                                 scale)
+                  total-subset (count subset-set)
+                  total-subscale (count subscale)]
+              (when (<= (- total-subset total-subscale)
+                        max-missing-notes)
+                (let [degrees (map :rotated-scale/original-degree subscale)
+                      matched-ratios (map :matched-ratio subscale)]
+                  {:degrees degrees
+                   :matched (/ total-subscale total-subset)
+                   :subscale/matched-ratios matched-ratios}))))
+          scale-rotations)))
+
+(defn get-degrees
+  [scale degrees]
+  (keep #(wrap-at % scale) degrees))
