@@ -40,7 +40,7 @@
 
 (deftest filter-scale-test
   (let [hex (->> [1 3 5 7] (->cps 2) set->maps (bound-ratio 2)
-                 (maps->data :bounded-ratio) :scale) ]
+                 (maps->data :bounded-ratio) :scale)]
     (is (= #{#{7 1} #{1 5} #{1 3}}
            (->> (filter-scale hex #{1}) (map :set) set)))
 
@@ -49,21 +49,21 @@
 
 (deftest find-subcps-test
   (testing "It returns a `::sub-cps-set` (set of CPSs), therefore guaranteeing uniqueness"
-    (is (s/valid? ::cps/sub-cps-set (find-subcps [1 2 3 4 5 6] 3 2 4)))
-    (is (s/valid? ::cps/sub-cps-set (find-subcps [1 2 3 4 5 6 7 8] 3 2 4))))
+    (is (s/valid? ::cps/sub-cps-set (find-subcps 3 [1 2 3 4 5 6] 2 4)))
+    (is (s/valid? ::cps/sub-cps-set (find-subcps 3 [1 2 3 4 5 6 7 8] 2 4))))
 
   (testing "There are 30 hexanies in an eikosany"
-    (is (= 30 (count (find-subcps [1 2 3 4 5 6] 3 2 4)))))
+    (is (= 30 (count (find-subcps 3 [1 2 3 4 5 6] 2 4)))))
 
   (testing "There are 30 tetrads (major and minor) in an eikosay"
-    (is (= 30 (count (set/union (find-subcps [1 2 3 4 5 6] 3 1 4)
-                                (find-subcps [1 2 3 4 5 6] 3 3 4)))))))
+    (is (= 30 (count (set/union (find-subcps 3 [1 2 3 4 5 6] 1 4)
+                                (find-subcps 3 [1 2 3 4 5 6] 3 4)))))))
 
 (deftest get-cps-description-test
   (testing "Creates a string representation of a CPS"
-    (is (= "1.2.3.4" (get-cps-description (->cps 2 [1 2 3 4])))))
+    (is (= "2)4 1.2.3.4" (get-cps-description (->cps 2 [1 2 3 4])))))
   (testing "Deals with fractions as generatos"
-    (is (= "1/4.2.3.4" (get-cps-description (->cps 2 [1/4 2 3 4])))))
+    (is (= "2)4 1/4.2.3.4" (get-cps-description (->cps 2 [1/4 2 3 4])))))
   (testing "Can represent common generators shared across a whole set (helpful for subcps sets)"
     (is (= "9-1.5.7.11" (get-cps-description
                          #{#{7 9 5} #{11 9 5} #{1 11 9}
@@ -77,16 +77,16 @@
 
 (deftest subcps-sets->map-test
   (testing "Converts a set of subcps sets into a map where keys are the descriptions of the subcps sets"
-    (is (= (subcps-sets->map (find-subcps [1 3 5 7] 2 1 3))
-           {"5-1.3.7" #{#{7 5} #{3 5} #{1 5}},
-            "3-1.5.7" #{#{3 5} #{7 3} #{1 3}},
-            "7-1.3.5" #{#{7 1} #{7 5} #{7 3}},
-            "1-3.5.7" #{#{7 1} #{1 5} #{1 3}}})))
+    (is (= {"1)3 of 2)4 5-1.3.7" #{#{7 5} #{3 5} #{1 5}},
+            "1)3 of 2)4 3-1.5.7" #{#{3 5} #{7 3} #{1 3}},
+            "1)3 of 2)4 7-1.3.5" #{#{7 1} #{7 5} #{7 3}},
+            "1)3 of 2)4 1-3.5.7" #{#{7 1} #{1 5} #{1 3}}}
+           (subcps-sets->map (find-subcps 2 [1 3 5 7] 1 3)))))
   (testing "It does not lose any subcps from the list"
-    (is (= 30 (count (subcps-sets->map (find-subcps [1 3 5 7 9 11] 3 2 4)))))
-    (is (= 30 (count (subcps-sets->map (set/union (find-subcps [1 2 3 4 5 6] 3 1 4)
-                                                  (find-subcps [1 2 3 4 5 6] 3 3 4))))))
-    (is (= 420 (count (subcps-sets->map (find-subcps [1 3 5 7 9 11 13 15] 4 2 4)))))))
+    (is (= 30 (count (subcps-sets->map (find-subcps 3 [1 3 5 7 9 11] 2 4)))))
+    (is (= 30 (count (subcps-sets->map (set/union (find-subcps 3 [1 2 3 4 5 6] 1 4)
+                                                  (find-subcps 3 [1 2 3 4 5 6] 3 4))))))
+    (is (= 420 (count (subcps-sets->map (find-subcps 4 [1 3 5 7 9 11 13 15] 2 4)))))))
 
 (deftest filter-subcps-map-test
   (testing "Will get a submap that only has sets that include *any* of the given generators"
@@ -139,13 +139,13 @@
 
 (deftest cps-intervals-test
   (testing "Calculates all intervals between a set and any other set in a cps"
-      (= (cps-intervals (->cps 2 [1 3 5 7]))
-         {#{7 1} {#{7 5} 5, #{3 5} 15/7, #{7 3} 3, #{1 5} 5/7, #{1 3} 3/7},
-          #{7 5} {#{7 1} 1/5, #{3 5} 3/7, #{7 3} 3/5, #{1 5} 1/7, #{1 3} 3/35},
-          #{3 5} {#{7 1} 7/15, #{7 5} 7/3, #{7 3} 7/5, #{1 5} 1/3, #{1 3} 1/5},
-          #{7 3} {#{7 1} 1/3, #{7 5} 5/3, #{3 5} 5/7, #{1 5} 5/21, #{1 3} 1/7},
-          #{1 5} {#{7 1} 7/5, #{7 5} 7, #{3 5} 3, #{7 3} 21/5, #{1 3} 3/5},
-          #{1 3} {#{7 1} 7/3, #{7 5} 35/3, #{3 5} 5, #{7 3} 7, #{1 5} 5/3}}))
+    (= (cps-intervals (->cps 2 [1 3 5 7]))
+       {#{7 1} {#{7 5} 5, #{3 5} 15/7, #{7 3} 3, #{1 5} 5/7, #{1 3} 3/7},
+        #{7 5} {#{7 1} 1/5, #{3 5} 3/7, #{7 3} 3/5, #{1 5} 1/7, #{1 3} 3/35},
+        #{3 5} {#{7 1} 7/15, #{7 5} 7/3, #{7 3} 7/5, #{1 5} 1/3, #{1 3} 1/5},
+        #{7 3} {#{7 1} 1/3, #{7 5} 5/3, #{3 5} 5/7, #{1 5} 5/21, #{1 3} 1/7},
+        #{1 5} {#{7 1} 7/5, #{7 5} 7, #{3 5} 3, #{7 3} 21/5, #{1 3} 3/5},
+        #{1 3} {#{7 1} 7/3, #{7 5} 35/3, #{3 5} 5, #{7 3} 7, #{1 5} 5/3}}))
   (testing "Calculates all intervals between a set and any other *related* set"
     (= (cps-intervals (->cps 2 [1 3 5 7]) true)
        {#{7 1} {#{7 5} 5, #{7 3} 3, #{1 5} 5/7, #{1 3} 3/7},
