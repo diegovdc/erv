@@ -9,7 +9,6 @@
                  [org.clojars.videco/time-time "0.1.0-SNAPSHOT"]
                  [com.gfredericks/exact "0.1.11"]
                  [com.taoensso/timbre "4.10.0"]
-                 [overtone "0.10.6"]
                  [table "0.5.0"]
                  [org.clojure/tools.namespace "1.3.0"]
                  [quil "4.0.0-SNAPSHOT"]]
