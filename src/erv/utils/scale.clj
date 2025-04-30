@@ -141,3 +141,12 @@
 (defn get-degrees
   [scale degrees]
   (keep #(wrap-at % scale) degrees))
+
+(defn scale-steps->degrees
+  "Convert a sequence of scale-steps defining a scale (e.g. [2 2 1 2 2 2 1] into a sequence of degrees"
+  ([scale-steps] (scale-steps->degrees scale-steps true))
+  ([scale-steps remove-octave?]
+   (->> scale-steps
+        (reduce (fn [acc n] (conj acc (+ n (or (last acc) 0))))
+                [0])
+        (drop-last (if remove-octave? 1 0)))))

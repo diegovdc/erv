@@ -5,7 +5,8 @@
    [erv.utils.ratios :refer [ratios->scale]]
    [erv.utils.scale :refer [cross-set dedupe-scale degree-stack
                             find-subset-degrees get-degrees rotate-scale
-                            scale->stacked-subscale scale-intervals tritriadic]]))
+                            scale->stacked-subscale scale-intervals
+                            scale-steps->degrees tritriadic]]))
 
 (deftest degree-stack-test
   (is (= [0 4 8]
@@ -202,3 +203,7 @@
            (get-degrees
             (ratios->scale [1 9/8 5/4 4/3 3/2 5/3 15/8])
             [0 2 11])))))
+
+(deftest scale-steps->degrees-test
+  (is (= [0 2 4 5 7 9 11 12]
+         (scale-steps->degrees [2 2 1 2 2 2 1] false))))
