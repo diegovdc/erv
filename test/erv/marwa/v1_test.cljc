@@ -2,7 +2,7 @@
   (:require
    [clojure.test :refer [deftest is testing]]
    [erv.marwa.v1 :as marwa :refer [base-permutations get-possible-generator-sequences
-                                   intervals->scale-2 all-permutations]]))
+                                   intervals->scale all-permutations]]))
 ;;;;;;;;
 ;; API
 ;;;;;;;;
@@ -45,11 +45,11 @@
           {:group-size 4, :generator-seq [8 6 8 6 7 7 6], :initial-index 0}]
          (base-permutations 7 7 6))))
 
-(deftest intervals->scale-2-test
+(deftest intervals->scale-test
   (is (= [2 2 1 2 2 2 1]
-         (intervals->scale-2 12 [2 2 1 2 2 2 1])))
+         (intervals->scale 12 [2 2 1 2 2 2 1])))
   (is (= [2 2 1 2 2 2 1]
-         (intervals->scale-2 12 [7 7 7 7 7 6 7]))))
+         (intervals->scale 12 [7 7 7 7 7 6 7]))))
 
 (deftest all-permutations-test
   (testing "Taking the base permutations of 12EDO diatonic, produce all permutations"

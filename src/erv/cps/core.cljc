@@ -115,7 +115,7 @@
             current-node (first nodes)
             edges (->> rest*
                        (filter #(= (dec (count (:set %))) (count (set/intersection (:set current-node)
-                                                            (:set %)))))
+                                                                                   (:set %)))))
                        (map #(conj [] current-node %)))]
         (recur rest*
                (reduce
@@ -214,13 +214,14 @@
   {:pre [(validate ::cps cps)]}
   (let [constants (apply set/intersection cps)
         non-constants (set/difference (apply set/union cps) constants)]
-    (str (::type (meta cps)) " "
-         (cond
-           (and (not-empty constants) (not-empty non-constants))
-           (str (factors->str constants) "-" (factors->str non-constants))
-           (not-empty constants) (factors->str constants)
-           (not-empty non-constants) (factors->str non-constants)
-           :else ""))))
+    (str/trim
+     (str (::type (meta cps)) " "
+          (cond
+            (and (not-empty constants) (not-empty non-constants))
+            (str (factors->str constants) "-" (factors->str non-constants))
+            (not-empty constants) (factors->str constants)
+            (not-empty non-constants) (factors->str non-constants)
+            :else "")))))
 
 (comment (get-cps-description (->cps 2 [1 3 5 7])))
 
@@ -502,10 +503,9 @@
        :graphs :simple)
 
   (require
-    '[clojure.test :refer [deftest testing is run-tests]]
-    '[erv.utils.conversions :as conv]
-    '[erv.scale.core :as scale])
+   '[clojure.test :refer [deftest testing is run-tests]]
+   '[erv.utils.conversions :as conv]
+   '[erv.scale.core :as scale])
   (scale/print-scale-intervals! (:nodes (make 2 [1 3 5 7]))
                                 :unit :ratios
                                 :ratio-type :ratio))
-

@@ -1,4 +1,2 @@
 {:known-macros [clojure.test.check.clojure-test/defspec
-               clojure.test.check.properties/for-all
-               overtone.core/defsynth
-               overtone.core/demo]}
+               clojure.test.check.properties/for-all]}

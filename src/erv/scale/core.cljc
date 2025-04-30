@@ -1,23 +1,21 @@
 (ns erv.scale.core
   #?@
-  (:clj
-   [(:require
-     [clojure.spec.alpha :as s]
-     [clojure.string :as str]
-     [erv.cps.core :as cps]
-     [erv.utils.conversions :refer [cps->name* ratio->cents]]
-     [erv.utils.core :refer [interval wrap-at]]
-     [erv.utils.sequencer :refer [play!]]
-     [table.core :as t]
-     [taoensso.timbre :as timbre])]
-   :cljs
-   [(:require
-     [clojure.spec.alpha :as s]
-     [clojure.string :as str]
-     [erv.utils.conversions :refer [cps->name* ratio->cents]]
-     [erv.utils.core :refer [interval wrap-at]]
-     [erv.utils.sequencer :refer [play!]]
-     [taoensso.timbre :as timbre])]))
+   (:clj
+    [(:require
+      [clojure.spec.alpha :as s]
+      [clojure.string :as str]
+      [erv.cps.core :as cps]
+      [erv.utils.conversions :refer [cps->name* ratio->cents]]
+      [erv.utils.core :refer [interval wrap-at]]
+      [table.core :as t]
+      [taoensso.timbre :as timbre])]
+    :cljs
+    [(:require
+      [clojure.spec.alpha :as s]
+      [clojure.string :as str]
+      [erv.utils.conversions :refer [cps->name* ratio->cents]]
+      [erv.utils.core :refer [interval wrap-at]]
+      [taoensso.timbre :as timbre])]))
 
 (s/def ::bounded-ratio number?)         ;; Used to be `ratio?` but changed to `number?` to support `edos`
 (s/def ::bounding-period number?)
@@ -142,35 +140,6 @@
                     #_:up-down (concat degrees (rest (reverse degrees))))]
      (map #(deg->freq scale base-freq %) degrees*))))
 
-
-(defn demo!
-  [scale &
-   {:keys [periods base-freq note-dur direction on-event]
-    :or {periods 1
-         base-freq 220
-         note-dur #?(:clj 0.5 :cljs 0.5)
-         direction :up-down
-         on-event (fn [i freq] (-> (wrap-at i scale)
-                                   (dissoc :bounding-period :bounded-ratio)
-                                   (assoc :note (cps->name* freq))
-                                   println))}}]
-  (play! (demo-scale* scale periods base-freq direction)
-         note-dur
-         :on-event on-event))
-
-(comment
-  (require '[erv.utils.conversions :refer [ratio->cents cps->midi midi->cps]]
-           '[erv.cps.core :as cps]
-           '[clojure.test :refer [testing is]]
-           '[clojure.string :as str]
-           '[erv.utils.sequencer :refer [play!]])
-
-  (demo! (:scale (cps/make 2 [1 3 5 7])))
-  (let [freqs (map #(cps->midi (deg->freq scale 10 %)) (range (count scale)))]
-    (str "[" (->> (map #(- % (first freqs)) freqs)
-                  (str/join ", "))
-         "]")))
-
 (do
   (defn print-scale-intervals!
     [scale
@@ -190,8 +159,7 @@
                                    ratios))))]
       #?(:clj (t/table data)
          :cljs (js/console.table data))
-      data))
-  )
+      data)))
 
 (comment
   (require '[erv.cps.core :as cps])
