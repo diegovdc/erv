@@ -2,7 +2,7 @@
   "Find constant structures by brute force"
   (:require
    [clojure.math.combinatorics :refer [combinations]]
-   [erv.constant-structures.core :refer [analyze maybe-round]]
+   [erv.constant-structures.core :refer [analyze maybe-rationalize]]
    [erv.utils.conversions :as conv]
    [erv.utils.core :refer [interval]]
    [erv.utils.ratios :refer [ratios->scale]]
@@ -92,7 +92,7 @@
   (let [[deg1 deg2] (sort deg-pair)
         a (:bounded-ratio (nth scale deg1))
         b (:bounded-ratio (nth scale deg2))]
-    (maybe-round (interval a b))))
+    (maybe-rationalize (interval a b) 10)))
 
 (def ^:private memoized-deg-combinations
   (memoize (comp #(map sort %)
@@ -102,22 +102,35 @@
 
 (def ^:private conj-set (fnil conj #{}))
 
+(defn- invert-interval [interval period]
+  (* period (/ 1 interval)))
+
 (defn- quick-check-cs?
   [deg-combinations scale]
-  (reduce
-   (fn [data deg-pair]
-     (let [[deg1 deg2] deg-pair
-           steps (- deg2 deg1)
-           interval (get-interval scale deg-pair)
-           updated-data (update data interval conj-set steps)
-           interval-steps (updated-data interval)]
-       (if (> (count interval-steps) 1)
-         (reduced {})
-         updated-data)))
-   {}
-   deg-combinations))
+  (let [period (-> scale first :bounding-period)
+        size (count scale)]
+    (reduce
+     (fn [data deg-pair]
+       (let [[deg1 deg2] deg-pair
+             steps (- deg2 deg1)
+             interval (get-interval scale deg-pair)
+             inversion-steps (- size steps)
+             inversion (invert-interval interval period)
+             updated-data (-> data
+                              (update interval conj-set steps)
+                              (update inversion conj-set inversion-steps))
+             interval-steps (updated-data interval)]
+         (when (> inversion period)
+           (timbre/error "Error in calculation, `inversion` cannot be larger than period"))
+         (if (> (count interval-steps) 1)
+           (reduced {})
+           updated-data)))
+     {}
+     deg-combinations)))
 
 (defn quick-cs-subsets
+  "Calculate all CS subset of the given sizes.
+  FIXME only really works for JI scales."
   [cs-sizes scale]
   (eduction
    (mapcat #(combinations (range (count scale)) %))

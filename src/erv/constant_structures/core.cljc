@@ -13,22 +13,33 @@
             (round2 6 n))
      :cljs (round2 6 n)))
 
+(defn maybe-rationalize
+  [n decimals]
+  #?(:clj (if (rational? n)
+            n
+            (rationalize (round2 decimals n)))
+     ;; TODO implement
+     :cljs (round2 6 n)))
+
 (defn get-intervals
-  [note-pair]
+  [scale-size note-pair]
   (->> note-pair
        ((fn [[a b]]
-          {(maybe-round (interval (:bounded-ratio a)
-                                  (:bounded-ratio b)))
-           {:steps #{(- (:index b)
-                        (:index a))}
-            :intervals [[a b]]}}))))
+          (let [period (:bounding-period a)
+                intvl (maybe-round (interval (:bounded-ratio a)
+                                             (:bounded-ratio b)))
+                inversion (* period (/ 1 intvl))]
+            {intvl {:steps #{(- (:index b) (:index a))}
+                    :intervals [[a b]]}
+             inversion {:steps #{(- scale-size (- (:index b) (:index a)))}
+                        :intervals [[b a]]}})))))
 
 (defn analyze
   [scale]
   (let [interval-data (->> (combo/combinations
                             (map-indexed #(assoc %2 :index %1) scale)
                             2)
-                           (map get-intervals)
+                           (map (partial get-intervals (count scale)))
                            (apply merge-with (partial merge-with concat))
                            (map (fn [[interval data]]
                                   {interval (update data :steps (partial into #{}))}))
@@ -64,7 +75,7 @@
                          (:scale (cps/make 2 [11 13 5 7]))))
 
 (:constant-structure? (analyze
-                       (:scale (cps/make 2 [1 3 5 7 9]))))
+                       (:scale (cps/make 2 [1 3 5 7]))))
 (:constant-structure? (analyze
                        (:scale (edo/from-pattern [2 2 1 2 2 2 1]))))
 #_(:non-cs-intervals (analyze
