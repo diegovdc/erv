@@ -5,6 +5,7 @@
    [erv.mos.mos :as mos]
    [erv.scale.core :as scale]
    [erv.utils.conversions :as conv]
+   [erv.utils.ratios :as ratios]
    [erv.utils.core :as utils]))
 
 (defn generate-exports []
@@ -13,5 +14,11 @@
             :edo {:fromPattern (comp clj->js edo/from-pattern)}
             :utils {:rotate (comp clj->js utils/rotate)
                     :ratioToCents (comp clj->js conv/ratio->cents)
-                    :freqToMidi (comp clj->js conv/cps->midi)}
-            :scale {:degToFreq (comp clj->js scale/deg->freq)}}))
+                    :centsToRatio (comp clj->js conv/cents->ratio)
+                    :freqToMidi (comp clj->js conv/cps->midi)
+                    :ratiosToScale (comp clj->js
+                                         (fn [period ratios]
+                                           (ratios/ratios->scale period (js->clj ratios))))}
+            :scale {:degToFreq  (comp clj->js (fn [scale root degree]
+                                                (let [scale* (js->clj scale {:keywordize-keys true})]
+                                                  (scale/deg->freq scale*  root degree))))}}))
