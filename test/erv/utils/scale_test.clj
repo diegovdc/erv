@@ -3,7 +3,7 @@
    [clojure.test :refer [deftest is testing]]
    [erv.edo.core :as edo]
    [erv.utils.ratios :refer [ratios->scale]]
-   [erv.utils.scale :refer [cross-set dedupe-scale degree-stack
+   [erv.utils.scale :refer [cross-set dedupe-scale degree-stack diamond
                             find-subset-degrees get-degrees rotate-scale
                             scale->stacked-subscale scale-intervals
                             scale-steps->degrees tritriadic]]))
@@ -207,3 +207,37 @@
 (deftest scale-steps->degrees-test
   (is (= [0 2 4 5 7 9 11 12]
          (scale-steps->degrees [2 2 1 2 2 2 1] false))))
+
+(deftest diamond-test
+  (is (= {:meta {:scale :diamond
+                 :factors [1 3 5 7 9]
+                 :period 2
+                 :size 19}
+          :scale
+          [{:bounded-ratio 1 :bounding-period 2 :ratio 1}
+           {:bounded-ratio 10/9 :bounding-period 2 :ratio 10/9}
+           {:bounded-ratio 9/8 :bounding-period 2 :ratio 9/8}
+           {:bounded-ratio 8/7 :bounding-period 2 :ratio 8/7}
+           {:bounded-ratio 7/6 :bounding-period 2 :ratio 7/6}
+           {:bounded-ratio 6/5 :bounding-period 2 :ratio 6/5}
+           {:bounded-ratio 5/4 :bounding-period 2 :ratio 5/4}
+           {:bounded-ratio 9/7 :bounding-period 2 :ratio 9/7}
+           {:bounded-ratio 4/3 :bounding-period 2 :ratio 4/3}
+           {:bounded-ratio 7/5 :bounding-period 2 :ratio 7/5}
+           {:bounded-ratio 10/7 :bounding-period 2 :ratio 10/7}
+           {:bounded-ratio 3/2 :bounding-period 2 :ratio 3/2}
+           {:bounded-ratio 14/9 :bounding-period 2 :ratio 14/9}
+           {:bounded-ratio 8/5 :bounding-period 2 :ratio 8/5}
+           {:bounded-ratio 5/3 :bounding-period 2 :ratio 5/3}
+           {:bounded-ratio 12/7 :bounding-period 2 :ratio 12/7}
+           {:bounded-ratio 7/4 :bounding-period 2 :ratio 7/4}
+           {:bounded-ratio 16/9 :bounding-period 2 :ratio 16/9}
+           {:bounded-ratio 9/5 :bounding-period 2 :ratio 9/5}]}
+         (diamond 2 1 3 5 7 9)))
+
+  (testing "A `diamond` is a special case of `cross-set`"
+    (is (=
+         (map :bounded-ratio (:scale (diamond 2 1 3 5 7 9)))
+         (map :bounded-ratio (:scale (cross-set 2
+                                                [1 3 5 7 9]
+                                                (map #(/ 1 %) [1 3 5 7 9]))))))))

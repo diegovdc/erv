@@ -103,15 +103,15 @@
          rotation)))
 
 (defn cross-set
-  [period & ratios]
-  (let [scale (->> ratios
+  [period & ratio-vecs]
+  (let [scale (->> ratio-vecs
                    (apply combo/cartesian-product)
                    (map #(apply * %))
                    flatten
                    (ratios->scale period)
                    dedupe-scale)]
     {:meta {:scale :cross-set
-            :sets ratios
+            :sets ratio-vecs
             :size (count scale)
             :period period}
      :scale scale}))
@@ -150,3 +150,15 @@
         (reduce (fn [acc n] (conj acc (+ n (or (last acc) 0))))
                 [0])
         (drop-last (if remove-octave? 1 0)))))
+
+(defn diamond
+  [period & factors]
+  (let [scale (->> (combo/cartesian-product factors factors)
+                   (mapv (fn [[a b]] (/ a b)))
+                   (ratios->scale period)
+                   dedupe-scale)]
+    {:meta {:scale :diamond
+            :factors factors
+            :size (count scale)
+            :period period}
+     :scale scale}))
