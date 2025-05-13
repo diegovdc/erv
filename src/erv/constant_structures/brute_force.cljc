@@ -141,7 +141,9 @@
              (when (seq (quick-check-cs? deg-pairs subscale))
                (map #(nth scale %) degs-combination)))))
    cs-sizes))
-
+(comment
+  (require '[clojure.math.combinatorics :as combo])
+  (combo/count-combinations (range 31) 22))
 (defn take-quick-cs-subsets
   "Takes n-items after dropping n-items. Takes an `eduction` as returned by `quick-cs-subsets`.
   NOTE this code is a general solution, but has specific names for documentation purposes.
