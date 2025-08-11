@@ -18,7 +18,6 @@
     (if (> n target) n (recur (+ period n)))))
 ;; inversions of a dekany
 
-
 (defn simplify-inversion [inversion]
   (let [common-factors (map (comp frequencies prime-factors) inversion)
         common-denominator (->> common-factors
