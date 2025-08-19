@@ -62,7 +62,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;; V2
-;; This one really works!
+;; This one really works!... but some diagonals are truncated (missing points) :(
 ;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn- slope->n-increment ;; TODO rename
@@ -74,7 +74,7 @@
   [initial-val diagonal]
   (reduce (fn [acc {:keys [coord]}]
             (let [{:keys [x y]} coord
-                  pascal-num (pascals-triangle/f x y)]
+                  pascal-num (pascals-triangle/default-coord-map [x y])]
               (-> acc
                   (update :coords conj coord)
                   (update :value + pascal-num))))
@@ -115,25 +115,38 @@
                              :convergence-index (inc convergence-index))))))
                   {:convergence-index -1
                    :last-10 ()
-                   :series [(first parts)]}
+                   :series [(first (first parts))]}
                   parts)))
        (#(dissoc % :last-10))))
 
+(defn make-slope-n->coords
+  [size slope]
+  (let [triangle-coords (apply concat (pascals-triangle/pascal-coordinates size))
+        n (fn [x y] (+ y (* x (/ (:y slope) (:x slope))))) ;; y = (slope-y/slope-x)*x + n
+        ;; Figure out `n` for every point for the linear formula: y = (slope-y/slope-x)*x + n, by iterating over the pascal-triangle as a vector of coordinates.
+        ]
+    (->> triangle-coords
+         (mapv (fn [[x y]] {:coord {:x x :y y} :slope (n x y)}))
+         (group-by :slope))))
+(make-slope-n->coords 10 {:x 1 :y 1})
 (do
-  ;; TODO: maybe make it dynamic so it creates as many rows as necessary instead of having a hardcoded value of 100
   (defn diagonal-sums-data
-    "Figure out `n` for every point for the linear formula: y = (slope-y/slope-x)*x + n, by iterating over the pascal-triangle as a vector of coordinates."
+    ;; TODO: maybe make it dynamic so it creates as many rows as necessary instead of having a hardcoded value of 100
     ([slope] (diagonal-sums-data 100 slope))
-    ([triangle-rows-size slope]
-     (let [n (fn [x y] (+ y (* x (/ (:y slope) (:x slope)))))
-           triangle-coords (apply concat (pascals-triangle/pascal-coordinates triangle-rows-size))
-           coord->slope (mapv (fn [[x y]] {:coord {:x x :y y} :slope (n x y)}) triangle-coords)
-           diagonals (group-by :slope coord->slope)
-           last-n (->> diagonals vec (sort-by first) last first)
+    ([size slope]
+     (let [slope-n->coords (make-slope-n->coords size slope)
+           last-n (->> slope-n->coords vec (sort-by first) last first)
            n-increment (slope->n-increment slope)
+           _ (println "n-increment" n-increment)
            slopes (range 0 (+ last-n n-increment) n-increment)
            ;; TODO: allow passing in a custom pascal-triangle
-           diagonal-sums* (diagonal-sums diagonals slopes)]
-       (convergence-analysis diagonal-sums*))))
+           diagonal-sums* (diagonal-sums slope-n->coords slopes)]
+       diagonal-sums*
+       #_(take size) (convergence-analysis diagonal-sums*))))
 
-  (diagonal-sums-data 100 {:x 4 :y 3}))
+  (->> (diagonal-sums-data 10 {:x 4 :y 3})
+       :series
+       (map (juxt :value :slope :coords))))
+;; if x < y then coords move by -x + y
+;; if x < y then coords move by +x - y
+;; slope = y
