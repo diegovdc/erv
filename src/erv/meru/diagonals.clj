@@ -171,6 +171,7 @@
 (defn intish? [n] (= n (int n)))
 
 ;;  WIP generate diagonals
+"Given the linear formula `y = (slope-y/slope-x)*x + n`, the algo first calculates the crossing at `x` (when `y` is 0). That gives the range of `x` integer points to check. Given that range use the line formula to find all `y` points that are also integers. When both c and y are integers the coordinate belongs to the pascal diagonal. `i` is the diagonal index and `n-inc-size` is the space between each diagonal."
 (let [i 4 ;; diagonal index
       slope {:x 1 :y 2}
       n-inc-size 1
