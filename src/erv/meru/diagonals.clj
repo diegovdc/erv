@@ -1,96 +1,14 @@
 (ns erv.meru.diagonals
   "Based on: https://www.anaphoria.com/meru.pdf"
-  (:require
-   [clojure.math :refer [ceil]]
-   [erv.math.pascals-triangle :as pascals-triangle]))
-
-(defn- diagonals-x-roots
-  "Calculates the row indexes where a diagonal should start so that every member of any row will be part of a diagnonal."
-  [diagonal-vector]
-  (let [[vec-x _vec-y] diagonal-vector]
-    (range 0 vec-x 1)))
-
-(diagonals-x-roots [3 1])
-
-(do
-  ;; TODO page 3 can't be completely generated at the moment.
-  ;; If x in the diagonal is > 1 then there will be some cells that will never be touched what Erv seems to do is to also start diagonals from there, in the order of the row. The zeros that he adds correspond to missing/placeholder values when the row size is < x.
-
-  (defn make
-    "NOTE: The `diagonal-vector` is a trigonometric vector with x,y coordinates.   "
-    ([slope] (make (pascals-triangle/make 30) slope))
-    ([triangle slope]
-     (let [[vec-x vec-y] slope
-           [x-root & x-roots*] (diagonals-x-roots slope)
-           diagonals (loop [y-root 0
-                            [x* y*] [0 x-root]
-                            diagonal []
-                            diagonals []
-                            remaining-roots x-roots*]
-                       (let [val (-> triangle (nth y* nil) (nth x* nil))]
-                         (cond
-                           ;; continue with the diagonal
-                           val
-                           (recur y-root
-                                  [(+ x* vec-x) (- y* vec-y)]
-                                  (conj diagonal val)
-                                  diagonals
-                                  remaining-roots)
-
-                           ;; move to next-x-root
-                           (and (not val)
-                                (seq remaining-roots))
-                           (let [[next-x-root & remaining-x-roots*] remaining-roots]
-                             (recur y-root
-                                    [next-x-root y-root]
-                                    []
-                                    (conj diagonals diagonal)
-                                    remaining-x-roots*))
-
-                           ;; go to next row
-                           (and (not val) (nth triangle (inc y-root) nil))
-                           (recur (inc y-root)
-                                  [0 (inc y-root)]
-                                  []
-                                  (conj diagonals diagonal)
-                                  x-roots*)
-                           :else (conj diagonals diagonal))))]
-       (mapv (partial apply +) diagonals))))
-
-  (comment)
-  ;; pg 13, the order of numbers here does not correspond to the Erv's, his ordering is related to the recurrent sequence formula.
-  (make [2 3]))
+  (:require [erv.math.pascals-triangle :as pascals-triangle]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
-;; V2
-;; This one really works!... but some diagonals are truncated (missing points) :(
-;;;;;;;;;;;;;;;;;;;;;;;;
+;; V3
+;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn- slope->n-increment ;; TODO rename
   [{:keys [x _y] :as _slope}]
   (/ 1 x))
-
-(defn- sum-diagonal
-  "`inital-val` {:value 0 :slope slope :coords []}"
-  [initial-val diagonal]
-  (reduce (fn [acc {:keys [coord]}]
-            (let [{:keys [x y]} coord
-                  pascal-num (pascals-triangle/default-coord-map [x y])]
-              (-> acc
-                  (update :coords conj coord)
-                  (update :value + pascal-num))))
-          initial-val
-          diagonal))
-
-(defn- diagonal-sums
-  [diagonals slopes]
-  (mapv (fn [slope]
-          (let [initial-val {:value 0 :slope slope :coords []}
-                diagonal (get diagonals slope)]
-            (if diagonal
-              (sum-diagonal initial-val diagonal)
-              initial-val)))
-        slopes))
 
 (defn- safe-division
   ([a b] (safe-division 0 a b))
@@ -122,54 +40,6 @@
                   parts)))
        (#(dissoc % :last-10))))
 
-(defn make-slope-n->coords
-  [size slope]
-  (let [triangle-coords (apply concat (pascals-triangle/pascal-coordinates size))
-        n (fn [x y] (+ y (* x (/ (:y slope) (:x slope))))) ;; y = (slope-y/slope-x)*x + n
-        ;; Figure out `n` for every point for the linear formula: y = (slope-y/slope-x)*x + n, by iterating over the pascal-triangle as a vector of coordinates.
-        ]
-    (->> triangle-coords
-         (mapv (fn [[x y]] {:coord {:x x :y y} :slope (n x y)}))
-         (group-by :slope))))
-(make-slope-n->coords 10 {:x 1 :y 1})
-(do
-  (defn diagonal-sums-data
-    ;; TODO: maybe make it dynamic so it creates as many rows as necessary instead of having a hardcoded value of 100
-    ([slope] (diagonal-sums-data 100 slope))
-    ([size slope]
-     (let [slope-n->coords (make-slope-n->coords size slope)
-           last-n (->> slope-n->coords vec (sort-by first) last first)
-           n-increment (slope->n-increment slope)
-           _ (println "n-increment" n-increment)
-           slopes (range 0 (+ last-n n-increment) n-increment)
-           ;; TODO: allow passing in a custom pascal-triangle
-           diagonal-sums* (diagonal-sums slope-n->coords slopes)]
-       diagonal-sums*
-       #_(take size) (convergence-analysis diagonal-sums*))))
-
-  (->> (diagonal-sums-data 10 {:x 1 :y 2})
-       :series
-       (map (juxt :value :slope :coords))))
-
-;; Problem:
-;; Some diagonals are incomplete
-;;
-;; Ideal solution:
-;; Diagonals should be created on demand
-;;
-;; ;; Sub-problem:
-;; ;; It seems impossible to know the order of diagonals
-;;;;; But is it really impossible? Perhaps the distance of the slopes can be know... it seems like it... If so, then this would be great.
-;;
-;; Alternate solution:
-;; The incomplete diagonals should either be
-;;;;  A. Completed - using slope to fully trace their path
-;;;;  B. Filtered out - removed (by checking missing points in their path)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; v3 generate complete diagonals on demand
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (defn intish? [n] (= n (int n)))
 
 (defn get-x
@@ -199,8 +69,7 @@
                     (when (intish? y) {:x x :y y})))
           x-range)))
 
-(make-diagonal {:x 1 :y 2} 1 4)
-;; TODO pascal triangle that generates rows on demand? The idea is to gradually generate diagonals up to either a given number  or a convergence pred
+#_(make-diagonal {:x 1 :y 2} 1 4)
 
 (do
   (defn diagonals
@@ -215,4 +84,4 @@
                  :coords (vec coords)}))
          convergence-analysis))
 
-  (diagonals 200 {:x 3 :y 5} pascals-triangle/default-coord-map))
+  (diagonals 300 {:x 3 :y 5} pascals-triangle/default-coord-map))
