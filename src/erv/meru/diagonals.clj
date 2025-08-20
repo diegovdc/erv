@@ -112,9 +112,11 @@
                         (-> acc
                             (assoc
                              :series (conj series (assoc b :ratio-vs-previous ratio))
+                             :convergence-ratio ratio
                              :last-10 (take 10 (conj last-10 ratio))
                              :convergence-index (inc convergence-index))))))
-                  {:convergence-index -1
+                  {:convergence-ratio nil
+                   :convergence-index -1
                    :last-10 ()
                    :series [(first (first parts))]}
                   parts)))
@@ -170,21 +172,47 @@
 
 (defn intish? [n] (= n (int n)))
 
-;;  WIP generate diagonals
-"Given the linear formula `y = (slope-y/slope-x)*x + n`, the algo first calculates the crossing at `x` (when `y` is 0). That gives the range of `x` integer points to check. Given that range use the line formula to find all `y` points that are also integers. When both c and y are integers the coordinate belongs to the pascal diagonal. `i` is the diagonal index and `n-inc-size` is the space between each diagonal."
-(let [i 4 ;; diagonal index
-      slope {:x 1 :y 2}
-      n-inc-size 1
-      get-n (fn [x y] (+ y (* x (/ (:y slope) (:x slope))))) ;; y = (slope-y/slope-x)*x + n
+(defn get-x
+  "x = (slope-x/slope-y) * (y - n)
+  NOTE: Multiplied by -1 because the line is assumed to be descending."
+  [y n slope]
+  (* -1 (/ (:x slope) (:y slope)) (- y n)))
 
-      ;; x = (slope-x/slope-y) * (y - n)
-      get-x (fn [y n] (* -1 (/ (:x slope) (:y slope)) (- y n)))
-      get-y (fn [x n] (+ n (* x -1 (/ (:y slope) (:x slope)))))
-      n (* i n-inc-size)
-      x-at-y0  (get-x 0 n)
-      x-range (range (-> x-at-y0 int inc))]
-  (keep (fn [x] (let [y (get-y x n)]
-                  (when (intish? y) {:x x :y y})))
-        x-range))
+(defn get-y
+  "y = (slope-y/slope-x)*x + n
+  NOTE: Multiplied by -1 because the line is assumed to be descending."
+  [x n slope]
+  (+ n (* x -1 (/ (:y slope) (:x slope)))))
 
+(defn make-diagonal
+  "Given the linear formula `y = (slope-y/slope-x)*x + n`, the algorithm
+  first calculates the crossing at `x` (when `y` is 0). This gives the
+  range of `x` integer points to check. Given that range use the line
+  formula to find all `y` points that are also integers.
+  When both `x` and `y` are integers the coordinate belongs to the pascal diagonal.
+  `n-inc-size` is the space between each diagonal, and the `diagonal-index` serves to calcualte the resulting diagonal given the `n-inc-size`."
+  [slope n-inc-size diagonal-index]
+  (let [n (* diagonal-index n-inc-size)
+        x-at-y0  (get-x 0 n slope)
+        x-range (range (-> x-at-y0 int inc))]
+    (keep (fn [x] (let [y (get-y x n slope)]
+                    (when (intish? y) {:x x :y y})))
+          x-range)))
+
+(make-diagonal {:x 1 :y 2} 1 4)
 ;; TODO pascal triangle that generates rows on demand? The idea is to gradually generate diagonals up to either a given number  or a convergence pred
+
+(do
+  (defn diagonals
+    [size slope pascal-coord->number]
+    (->> (range size)
+         (map #(make-diagonal slope (slope->n-increment slope) %))
+         (map (fn [coords]
+                {:value (->> coords
+                             (map  (fn [{:keys [x y]}]
+                                     (pascal-coord->number [x y])))
+                             (apply +))
+                 :coords (vec coords)}))
+         convergence-analysis))
+
+  (diagonals 200 {:x 3 :y 5} pascals-triangle/default-coord-map))
