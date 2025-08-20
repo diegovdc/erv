@@ -1,6 +1,7 @@
 (ns erv.meru.diagonals
   "Based on: https://www.anaphoria.com/meru.pdf"
   (:require
+   [clojure.math :refer [ceil]]
    [erv.math.pascals-triangle :as pascals-triangle]))
 
 (defn- diagonals-x-roots
@@ -144,9 +145,45 @@
        diagonal-sums*
        #_(take size) (convergence-analysis diagonal-sums*))))
 
-  (->> (diagonal-sums-data 10 {:x 4 :y 3})
+  (->> (diagonal-sums-data 10 {:x 1 :y 2})
        :series
        (map (juxt :value :slope :coords))))
-;; if x < y then coords move by -x + y
-;; if x < y then coords move by +x - y
-;; slope = y
+
+;; Problem:
+;; Some diagonals are incomplete
+;;
+;; Ideal solution:
+;; Diagonals should be created on demand
+;;
+;; ;; Sub-problem:
+;; ;; It seems impossible to know the order of diagonals
+;;;;; But is it really impossible? Perhaps the distance of the slopes can be know... it seems like it... If so, then this would be great.
+;;
+;; Alternate solution:
+;; The incomplete diagonals should either be
+;;;;  A. Completed - using slope to fully trace their path
+;;;;  B. Filtered out - removed (by checking missing points in their path)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; v3 generate complete diagonals on demand
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn intish? [n] (= n (int n)))
+
+;;  WIP generate diagonals
+(let [i 4 ;; diagonal index
+      slope {:x 1 :y 2}
+      n-inc-size 1
+      get-n (fn [x y] (+ y (* x (/ (:y slope) (:x slope))))) ;; y = (slope-y/slope-x)*x + n
+
+      ;; x = (slope-x/slope-y) * (y - n)
+      get-x (fn [y n] (* -1 (/ (:x slope) (:y slope)) (- y n)))
+      get-y (fn [x n] (+ n (* x -1 (/ (:y slope) (:x slope)))))
+      n (* i n-inc-size)
+      x-at-y0  (get-x 0 n)
+      x-range (range (-> x-at-y0 int inc))]
+  (keep (fn [x] (let [y (get-y x n)]
+                  (when (intish? y) {:x x :y y})))
+        x-range))
+
+;; TODO pascal triangle that generates rows on demand? The idea is to gradually generate diagonals up to either a given number  or a convergence pred
