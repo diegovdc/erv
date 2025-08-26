@@ -30,9 +30,7 @@
   (/ (factorial (+ x y))
      (* (factorial x) (factorial y))))
 
-;; TODO create a Pascal's Triangle implementation that can be seeded, and that returns something that has an interface like `f` above.
-
-(defn pascal-coordinates
+(defn- pascal-coordinates
   [size]
   (->> (range size)
        (mapv
@@ -41,12 +39,11 @@
                (map
                 (fn [i] [(- size* i) i])))))))
 
-(do
-  (defn make-coord-map
-    "Returns a `hash-map` that maps between a pascal coordinate (a [pos-int? pos-int?] vector) and the corresponding pascal-number. Works the same as `default-coord-map` (except for the row `size` constraint) but works for custom seeded pascal triangles. "
-    [seed-l seed-r size]
-    (->> (map vector
-              (apply concat (pascal-coordinates size))
-              (apply concat (make seed-l seed-r size)))
-         (into {})))
-  (make-coord-map 1 2 3))
+(defn make-coord-map
+  "Returns a `hash-map` that maps between a pascal coordinate (a [pos-int? pos-int?] vector) and the corresponding pascal-number. Works the same as `default-coord-map` (except for the row `size` constraint) but works for custom seeded pascal triangles. "
+  [seed-l seed-r size]
+  (with-meta (->> (map vector
+                       (apply concat (pascal-coordinates size))
+                       (apply concat (make seed-l seed-r size)))
+                  (into {}))
+    {:triangle-seed {:left seed-l :right seed-r}}))

@@ -2,6 +2,7 @@
   "Based on: https://www.anaphoria.com/meru.pdf"
   (:require
    [erv.math.pascals-triangle :as pascals-triangle]
+   [erv.mos.v3.core :refer [gen->mos-ratios]]
    [erv.utils.core :refer [round2]]
    [taoensso.timbre :as timbre]))
 
@@ -58,7 +59,7 @@
                     :reached-convergence? false}
                    parts)))
         (#(dissoc % :last-10))
-        (#(assoc % :series (map :value (:series-data %)))))))
+        (#(assoc % :series (mapv :value (:series-data %)))))))
 
 (defn intish? [n] (= n (int n)))
 
@@ -91,6 +92,26 @@
 
 #_(make-diagonal {:x 1 :y 2} 1 4)
 
+(do
+  ;; TODO move somewhere else (utils or something, but input may be better in some other way).
+  (defn convergence-mos-data
+    [convergence-ratio]
+    (->> (gen->mos-ratios (rationalize convergence-ratio) 2 100)
+         (map :meta)))
+
+  (defn convergence-mos-data-summary
+    [convergence-ratio]
+    (->> convergence-ratio
+         convergence-mos-data
+         (map (fn [meta]
+                (select-keys meta [:size
+                                   :mos/pattern.name
+                                   :mos/sL-ratio.float
+                                   :mos/s.cents
+                                   :mos/L.cents])))))
+
+  (convergence-mos-data-summary 1.618))
+
 (defn diagonals
   [{:keys [size slope pascal-coord->number convergence?-fn convergence-precision]}]
   (when (and convergence-precision convergence?-fn)
@@ -101,6 +122,9 @@
                           :else default-convergence?-fn)
         update-convergence-data (fn [data]
                                   (assoc data
+                                         :triangle-seed (if (= pascal-coord->number pascals-triangle/default-coord-map)
+                                                          {:left 1 :right 1}
+                                                          (:triangle-seed (meta pascal-coord->number)))
                                          :convergence-precision convergence-precision
                                          :convergence-ratio-with-precision (if convergence-precision
                                                                              (round2 convergence-precision
