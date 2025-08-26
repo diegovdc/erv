@@ -1,6 +1,9 @@
 (ns erv.meru.diagonals
   "Based on: https://www.anaphoria.com/meru.pdf"
-  (:require [erv.math.pascals-triangle :as pascals-triangle]))
+  (:require
+   [erv.math.pascals-triangle :as pascals-triangle]
+   [erv.utils.core :refer [round2]]
+   [taoensso.timbre :as timbre]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;; V3
@@ -15,30 +18,47 @@
   ([default-val a b]
    (if (zero? a) default-val (double (/ b a)))))
 
+(defn- default-convergence?-fn
+  [last-10-ratios]
+  (and (= 10 (count last-10-ratios))
+       (apply = last-10-ratios)))
+
+(defn- decimal-places-convergence?-fn
+  "Evaluate convergence according to a given number of decimal places in the provided ratios."
+  [decimal-places last-10-ratios]
+  (->> last-10-ratios
+       (map #(if (nil? %) nil (round2 decimal-places %)))
+       default-convergence?-fn))
+
+(decimal-places-convergence?-fn 2 [1.111234
+                                   1.111235])
+
 (defn- convergence-analysis
-  [diagonals-series]
-  (->> diagonals-series
-       (partition 2 1)
-       ((fn [parts]
-          (reduce (fn [{:keys [last-10 convergence-index series] :as acc} [a b]]
-                    (let [ratio (safe-division nil (:value a) (:value b))]
-                      (if (and (= 10 (count last-10))
-                               (apply = last-10))
-                        (reduced (-> acc
-                                     (update :convergence-index - 10)
-                                     (assoc :reached-convergence? true)))
-                        (-> acc
-                            (assoc
-                             :series (conj series (assoc b :ratio-vs-previous ratio))
-                             :convergence-ratio ratio
-                             :last-10 (take 10 (conj last-10 ratio))
-                             :convergence-index (inc convergence-index))))))
-                  {:convergence-ratio nil
-                   :convergence-index -1
-                   :last-10 ()
-                   :series [(first (first parts))]}
-                  parts)))
-       (#(dissoc % :last-10))))
+  ([diagonals-series] (convergence-analysis default-convergence?-fn diagonals-series))
+  ([convergence?-fn diagonals-series]
+   (->> diagonals-series
+        (partition 2 1)
+        ((fn [parts]
+           (reduce (fn [{:keys [last-10 convergence-index series-data] :as acc} [a b]]
+                     (let [ratio (safe-division nil (:value a) (:value b))]
+                       (if (convergence?-fn last-10)
+                         (reduced (-> acc
+                                      (update :convergence-index - 10)
+                                      (assoc :reached-convergence? true)))
+                         (-> acc
+                             (assoc
+                              :series-data (conj series-data (assoc b :ratio-vs-previous ratio))
+                              :convergence-ratio ratio
+                              :last-10 (take 10 (conj last-10 ratio))
+                              :convergence-index (inc convergence-index))))))
+                   {:convergence-ratio nil
+                    :convergence-index -1
+                    :last-10 ()
+                    :series-data [(first (first parts))]
+                    :reached-convergence? false}
+                   parts)))
+        (#(dissoc % :last-10))
+        (#(assoc % :series (map :value (:series-data %)))))))
 
 (defn intish? [n] (= n (int n)))
 
@@ -71,9 +91,21 @@
 
 #_(make-diagonal {:x 1 :y 2} 1 4)
 
-(do
-  (defn diagonals
-    [size slope pascal-coord->number]
+(defn diagonals
+  [{:keys [size slope pascal-coord->number convergence?-fn convergence-precision]}]
+  (when (and convergence-precision convergence?-fn)
+    (timbre/warn "Both `convergence?-fn` and `convergence-precision` have been provided. The latter is going to be ignored."))
+  (let [convergence?-fn (cond
+                          convergence?-fn convergence?-fn
+                          convergence-precision (partial decimal-places-convergence?-fn convergence-precision)
+                          :else default-convergence?-fn)
+        update-convergence-data (fn [data]
+                                  (assoc data
+                                         :convergence-precision convergence-precision
+                                         :convergence-ratio-with-precision (if convergence-precision
+                                                                             (round2 convergence-precision
+                                                                                     (:convergence-ratio data))
+                                                                             (:convergence-ratio data))))]
     (->> (range size)
          (map #(make-diagonal slope (slope->n-increment slope) %))
          (map (fn [coords]
@@ -82,6 +114,10 @@
                                      (pascal-coord->number [x y])))
                              (apply +))
                  :coords (vec coords)}))
-         convergence-analysis))
+         (convergence-analysis convergence?-fn)
+         update-convergence-data)))
 
-  (diagonals 300 {:x 3 :y 5} pascals-triangle/default-coord-map))
+(diagonals {:size 100
+            :slope {:x 3 :y 5}
+            :convergence-precision 3
+            :pascal-coord->number pascals-triangle/default-coord-map})
