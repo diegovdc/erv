@@ -1,7 +1,8 @@
 (ns erv.utils.scale
   (:require
    [clojure.math.combinatorics :as combo]
-   [erv.utils.core :refer [interval period-reduce rotate wrap-at]]
+   [erv.utils.core :refer [decompose-ratio interval lcm-of-list period-reduce
+                           rotate wrap-at]]
    [erv.utils.ratios :refer [interval-seq->ratio-stack normalize-ratios
                              ratios->scale ratios-intervals]]))
 
@@ -143,7 +144,7 @@
   (keep #(wrap-at % scale) degrees))
 
 (defn scale-steps->degrees
-  "Convert a sequence of scale-steps defining a scale (e.g. [2 2 1 2 2 2 1] into a sequence of degrees"
+  "Convert a sequence of scale-steps defining a scale (e.g. [2 2 1 2 2 2 1]) into a sequence of degrees"
   ([scale-steps] (scale-steps->degrees scale-steps true))
   ([scale-steps remove-octave?]
    (->> scale-steps
@@ -162,3 +163,40 @@
             :size (count scale)
             :period period}
      :scale scale}))
+
+;; TODO add tests
+;;
+;;
+;;
+;;
+;;
+(defn proportional-chord?
+  [ratios]
+  (let [ratio-analysis (decompose-ratio ratios)
+        lcm (lcm-of-list (mapv :denom ratio-analysis))]
+    (->> ratio-analysis
+         (mapv (fn [{:keys [denom numer]}]
+                 (* numer (/ lcm denom))))
+         sort
+         (partition 2 1)
+         (mapv (fn [[a b]] (- b a)))
+         (apply =))))
+
+(proportional-chord? [1 3/2 5/4])
+
+(defn +degree [scale]
+  (map-indexed (fn [i n] (assoc n :degree i)) scale))
+
+(do
+  (defn proportional-chords
+    [chord-size scale]
+    (let [scale (+degree scale)
+          proportional-chords-by-notes (->> (combo/combinations scale chord-size)
+                                            (keep (fn [ns]
+                                                    (when (->> ns (mapv :ratio) proportional-chord?)
+                                                      ns))))]
+      {:by-notes proportional-chords-by-notes
+       :by-degrees (mapv (fn [pc] (mapv  :degree pc))
+                         proportional-chords-by-notes)}))
+
+  (proportional-chords 4 (ratios->scale [1 3 5 7 9])))

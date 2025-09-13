@@ -1,4 +1,6 @@
-(ns erv.meru.recurrent-series)
+(ns erv.meru.recurrent-series
+  (:require
+   [erv.meru.utils :refer [get-convergence-double-with-precision]]))
 
 (defn seq-ratios* [recurrent-seq]
   (->> recurrent-seq
@@ -44,8 +46,9 @@
   Hn-3 + Hn-2 = Hn
   `:i1` corresponds to 2, taken from Hn-2
   `:i2` corresponds to 3, taken from Hn-3."
-  [{:keys [seed formula _i1 _i2 _f] :as config}]
-  (let [config* (get scale-formulas formula config)
+  [{:keys [seed formula _i1 _i2 _f convergence-precision] :as config}]
+  (let [preset-config (get scale-formulas formula)
+        config* (or preset-config config)
         {:keys [i1 i2 f] :or {f +}} config*
         seed*  (mapv #?(:clj bigint :cljs js/BigInt) seed)
         _ (when (> i2 (count seed))
@@ -60,8 +63,16 @@
                        b* (first (take-last i2 seq**))]
                    (if (apply = (seq-ratios (take-last 6 seq**)))
                      seq**
-                     (recur seq** a* b*))))]
-    {:convergence-double (last (seq-ratios series))
+                     (recur seq** a* b*))))
+        convergence-double (last (seq-ratios series))]
+    {:seed seed
+     :preset-formula formula
+     :convergence-precision convergence-precision
+     :convergence-double convergence-double
+     :convergence-double-with-precision (get-convergence-double-with-precision
+                                         convergence-precision
+                                         convergence-double)
      :convergence (last (seq-ratios* series))
      :convergence-index (converges-at series)
+     :reached-convergence? true
      :series series}))

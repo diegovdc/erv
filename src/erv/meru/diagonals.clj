@@ -2,6 +2,7 @@
   "Based on: https://www.anaphoria.com/meru.pdf"
   (:require
    [erv.math.pascals-triangle :as pascals-triangle]
+   [erv.meru.utils :refer [get-convergence-double-with-precision]]
    [erv.mos.v3.core :refer [gen->mos-ratios]]
    [erv.utils.core :refer [round2]]
    [taoensso.timbre :as timbre]))
@@ -49,10 +50,10 @@
                          (-> acc
                              (assoc
                               :series-data (conj series-data (assoc b :ratio-vs-previous ratio))
-                              :convergence-ratio ratio
+                              :convergence-double ratio
                               :last-10 (take 10 (conj last-10 ratio))
                               :convergence-index (inc convergence-index))))))
-                   {:convergence-ratio nil
+                   {:convergence-double nil
                     :convergence-index -1
                     :last-10 ()
                     :series-data [(first (first parts))]
@@ -92,28 +93,9 @@
 
 #_(make-diagonal {:x 1 :y 2} 1 4)
 
-(do
-  ;; TODO move somewhere else (utils or something, but input may be better in some other way).
-  (defn convergence-mos-data
-    [convergence-ratio]
-    (->> (gen->mos-ratios (rationalize convergence-ratio) 2 100)
-         (map :meta)))
-
-  (defn convergence-mos-data-summary
-    [convergence-ratio]
-    (->> convergence-ratio
-         convergence-mos-data
-         (map (fn [meta]
-                (select-keys meta [:size
-                                   :mos/pattern.name
-                                   :mos/sL-ratio.float
-                                   :mos/s.cents
-                                   :mos/L.cents])))))
-
-  (convergence-mos-data-summary 1.618))
-
 (defn diagonals
-  [{:keys [size slope pascal-coord->number convergence?-fn convergence-precision]}]
+  [{:keys [size slope pascal-coord->number convergence?-fn convergence-precision]
+    :or {pascal-coord->number pascals-triangle/default-coord-map}}]
   (when (and convergence-precision convergence?-fn)
     (timbre/warn "Both `convergence?-fn` and `convergence-precision` have been provided. The latter is going to be ignored."))
   (let [convergence?-fn (cond
@@ -126,10 +108,9 @@
                                                           {:left 1 :right 1}
                                                           (:triangle-seed (meta pascal-coord->number)))
                                          :convergence-precision convergence-precision
-                                         :convergence-ratio-with-precision (if convergence-precision
-                                                                             (round2 convergence-precision
-                                                                                     (:convergence-ratio data))
-                                                                             (:convergence-ratio data))))]
+                                         :convergence-double-with-precision (get-convergence-double-with-precision
+                                                                             convergence-precision
+                                                                             (:convergence-double data))))]
     (->> (range size)
          (map #(make-diagonal slope (slope->n-increment slope) %))
          (map (fn [coords]
@@ -140,8 +121,3 @@
                  :coords (vec coords)}))
          (convergence-analysis convergence?-fn)
          update-convergence-data)))
-
-(diagonals {:size 100
-            :slope {:x 3 :y 5}
-            :convergence-precision 3
-            :pascal-coord->number pascals-triangle/default-coord-map})
