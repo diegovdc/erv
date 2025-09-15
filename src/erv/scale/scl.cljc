@@ -166,22 +166,28 @@
 
 (defn make-kbm
   [{:as _kbm-template-config
-    :keys [scale-data degrees middle-note middle-note-freq]
+    :keys [scale-data degrees middle-note middle-note-freq comments?]
     :or {middle-note-freq (conv/midi->cps 60)
-         middle-note 60}}]
+         middle-note 60
+         comments? true}}]
   (let [scale-description (get-description-data scale-data)
         scale (:scale scale-data)
         scale-size (count scale)]
-    (format kbm-template
-            (:name scale-description "unknown.scl")
-            (:description scale-description "")
-            (count degrees)
-            middle-note      ;; middle note
-            middle-note      ;; reference note
-            middle-note-freq ;; frequency
-            scale-size
-            (str/join "\n" degrees)
-            made-with)))
+    (cond-> (format kbm-template
+                    (:name scale-description "unknown.scl")
+                    (:description scale-description "")
+                    (count degrees)
+                    middle-note      ;; middle note
+                    middle-note      ;; reference note
+                    middle-note-freq ;; frequency
+                    scale-size
+                    (str/join "\n" degrees)
+                    made-with)
+      (not comments?) ((fn [kbm]
+                         (let [lines (str/split-lines kbm)]
+                           (->> lines
+                                (remove #(str/starts-with? % "!"))
+                                (str/join "\n"))))))))
 
 (comment
   (def scale-data (erv.cps.core/make 2 [1 3 5 7]))
