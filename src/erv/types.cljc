@@ -19,6 +19,7 @@
   (mu/merge #'MeruBaseData
             [:map
              [:seed [:vector :int]]]))
+
 (def MeruDiagonalsData
   (mu/merge #'MeruBaseData
             [:map

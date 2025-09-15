@@ -4,9 +4,10 @@
    [erv.edo.core :as edo]
    [erv.utils.ratios :refer [ratios->scale]]
    [erv.utils.scale :refer [cross-set dedupe-scale degree-stack diamond
-                            find-subset-degrees get-degrees rotate-scale
-                            scale->stacked-subscale scale-intervals
-                            scale-steps->degrees tritriadic]]))
+                            find-subset-degrees get-degrees
+                            proportional-chords proportional-difference
+                            rotate-scale scale->stacked-subscale
+                            scale-intervals scale-steps->degrees tritriadic]]))
 
 (deftest degree-stack-test
   (is (= [0 4 8]
@@ -241,3 +242,14 @@
          (map :bounded-ratio (:scale (cross-set 2
                                                 [1 3 5 7 9]
                                                 (map #(/ 1 %) [1 3 5 7 9]))))))))
+
+(deftest proportional-difference-test
+  (is (= 1
+         (proportional-difference [1 5/4 3/2])))
+  (is (= nil
+         (proportional-difference [1 9/8 3/2]))))
+
+(deftest proportional-chords-test
+  (is (= {:by-notes {1N [[1 9/8 5/4] [1 5/4 3/2] [5/4 3/2 7/4]]},
+          :by-degrees {1N [[0 1 2] [0 2 3] [2 3 4]]}}
+         (proportional-chords 3 (ratios->scale [1 3 5 7 9])))))

@@ -1,10 +1,13 @@
 (ns erv.utils.scale
   (:require
    [clojure.math.combinatorics :as combo]
-   [erv.utils.core :refer [decompose-ratio interval lcm-of-list period-reduce
+   [erv.utils.core :refer [decompose-ratios interval lcm-of-list period-reduce
                            rotate wrap-at]]
    [erv.utils.ratios :refer [interval-seq->ratio-stack normalize-ratios
                              ratios->scale ratios-intervals]]))
+
+(defn +degree [scale]
+  (map-indexed (fn [i n] (assoc n :degree i)) scale))
 
 (defn degree-stack
   "Generate a stack ratios from a single (degree) generator"
@@ -170,9 +173,10 @@
 ;;
 ;;
 ;;
-(defn proportional-chord?
+(defn proportional-difference
+  "Returns the difference between the ratios if the chord is proportional, otherwiser returns `nil`"
   [ratios]
-  (let [ratio-analysis (decompose-ratio ratios)
+  (let [ratio-analysis (decompose-ratios ratios)
         lcm (lcm-of-list (mapv :denom ratio-analysis))]
     (->> ratio-analysis
          (mapv (fn [{:keys [denom numer]}]
@@ -180,23 +184,24 @@
          sort
          (partition 2 1)
          (mapv (fn [[a b]] (- b a)))
-         (apply =))))
+         (#(when (apply = %) (first %))))))
 
-(proportional-chord? [1 3/2 5/4])
-
-(defn +degree [scale]
-  (map-indexed (fn [i n] (assoc n :degree i)) scale))
-
-(do
-  (defn proportional-chords
-    [chord-size scale]
-    (let [scale (+degree scale)
-          proportional-chords-by-notes (->> (combo/combinations scale chord-size)
-                                            (keep (fn [ns]
-                                                    (when (->> ns (mapv :ratio) proportional-chord?)
-                                                      ns))))]
-      {:by-notes proportional-chords-by-notes
-       :by-degrees (mapv (fn [pc] (mapv  :degree pc))
-                         proportional-chords-by-notes)}))
-
-  (proportional-chords 4 (ratios->scale [1 3 5 7 9])))
+(defn proportional-chords
+  "Returns a map with keys `:by-notes` and `:by-degrees` with the notes or degrees that form proportional chords of a given size.
+  The map groups these notes or degrees by the difference in beats common to them."
+  [chord-size scale]
+  (let [scale (+degree scale)
+        proportional-chords-by-notes (->> (combo/combinations scale chord-size)
+                                          (keep (fn [ns]
+                                                  (when-let [diff (->> ns (mapv :ratio) proportional-difference)]
+                                                    [diff ns]))))]
+    {:by-notes (reduce
+                (fn [acc [diff ns]]
+                  (update acc diff (fnil conj []) (mapv :ratio ns)))
+                {}
+                proportional-chords-by-notes)
+     :by-degrees (reduce
+                  (fn [acc [diff ns]]
+                    (update acc diff (fnil conj []) (mapv :degree ns)))
+                  {}
+                  proportional-chords-by-notes)}))

@@ -5,14 +5,11 @@
    [erv.meru.diagonals]
    [erv.meru.recurrent-series]
    [erv.mos.v3.core :refer [gen->mos-ratios]]
-   [erv.utils.core :refer [lcm-of-list round2]]))
+   [erv.utils.core :refer [round2]]))
 
 (def recurrent-series #'erv.meru.recurrent-series/recurrent-series)
 
 (def diagonals #'erv.meru.diagonals/diagonals)
-
-(diagonals {:size 20
-            :slope {:x 1 :y 2}})
 
 (defn convergence-mos-data
   ([convergence-double] (convergence-mos-data {} convergence-double))
@@ -34,26 +31,6 @@
                                   :mos/sL-ratio.float
                                   :mos/s.cents
                                   :mos/L.cents]))))))
-
-(convergence-mos-data-summary (diagonals {:size 20
-
-                                          :slope {:x 1 :y 2}}))
-
-(do
-
-  (defn proportional-chord?
-    [& ratios]
-    (let [ratio-analysis (decompose-ratio ratios)
-          lcm (lcm-of-list (mapv :denom ratio-analysis))]
-      (->> ratio-analysis
-           (mapv (fn [{:keys [denom numer]}]
-                   (* numer (/ lcm denom))))
-           sort
-           (partition 2 1)
-           (mapv (fn [[a b]] (- b a)))
-           (apply =))))
-
-  (proportional-chord? 1 3/2 5/4))
 
 (comment
   (do
