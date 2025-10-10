@@ -172,7 +172,11 @@
          comments? true}}]
   (let [scale-description (get-description-data scale-data)
         scale (:scale scale-data)
-        scale-size (count scale)]
+        scale-size (count scale)
+        degrees* (->> degrees
+                      (map #(mod % scale-size))
+                      sort
+                      (str/join "\n"))]
     (cond-> (format kbm-template
                     (:name scale-description "unknown.scl")
                     (:description scale-description "")
@@ -181,7 +185,7 @@
                     middle-note      ;; reference note
                     middle-note-freq ;; frequency
                     scale-size
-                    (str/join "\n" degrees)
+                    degrees*
                     made-with)
       (not comments?) ((fn [kbm]
                          (let [lines (str/split-lines kbm)]
@@ -190,10 +194,51 @@
                                 (str/join "\n"))))))))
 
 (comment
+  (require '[erv.utils.ratios :refer [ratios->scale]])
   (def scale-data (erv.cps.core/make 2 [1 3 5 7]))
 
   (println (make-kbm {:scale-data scale-data
-                      :degrees [1 "x" "x" 3 "x"]}))
+                      :comments? false
+                      :degrees [0 6 12 16 22 28 32]}))
+
+  (println (make-kbm {:scale-data {:scale (ratios->scale [4181/4096
+                                                          2178309/2097152
+                                                          17/16
+                                                          17711/16384
+                                                          9227465/8388608
+                                                          9/8
+                                                          75025/65536
+                                                          39088169/33554432
+                                                          305/256
+                                                          317811/262144
+                                                          165580141/134217728
+                                                          323/256
+                                                          1346269/1048576
+                                                          21/16
+                                                          5473/4096
+                                                          5702887/4194304
+                                                          89/64
+                                                          1449/1024
+                                                          24157817/16777216
+                                                          377/256
+                                                          98209/65536
+                                                          102334155/67108864
+                                                          1597/1024
+                                                          104005/65536
+                                                          13/8
+                                                          6765/4096
+                                                          1762289/1048576
+                                                          55/32
+                                                          28657/16384
+                                                          933147/524288
+                                                          233/128
+                                                          121393/65536
+                                                          31622993/16777216
+                                                          987/512
+                                                          514229/262144
+                                                          2/1])}
+                      :comments? false
+                      :degrees [0 6 12 16 22 28 32]}))
 
   (spit-kbm {:scale-data scale-data
              :degrees [1 3]}))
