@@ -2,7 +2,7 @@
   (:require
    [clojure.math.combinatorics :as combo]
    [erv.utils.conversions :refer [cps->name*]]
-   [erv.utils.core :refer [make-map-by-key pow]]))
+   [erv.utils.core :refer [decompose-ratio make-map-by-key pow prime-factors]]))
 
 (comment)
 #_(def c (* 3 11 8))
@@ -101,7 +101,7 @@
                                        (mapv
                                         (fn [period root-freq]
                                           (let [k (keyword (str "diff-period-" period))]
-                                            (double (* root-freq (:diff pair)))))
+                                            #_(double) (* root-freq (:diff pair))))
                                         (range))
                                        #_(into {})
                                        (assoc pair
@@ -143,26 +143,80 @@
           ratio-pairs))
        (range)
        root-periods-freqs)))
-  (->> (+beat-hz-by-period 2 1 #_[1 5/4 3/2 7/4]
-                           [1
-                            67/64
-                            279/256
-                            9/8
-                            75/64
-                            39/32
-                            5/4
-                            167/128
-                            87/64
-                            45/32
-                            187/128
-                            3/2
-                            25/16
-                            417/256
-                            27/16
-                            7/4
-                            233/128
-                            15/8
-                            125/64])))
+  (def beat-data
+    (->> (+beat-hz-by-period 2 1 #_[1 5/4 3/2 7/4]
+                             #_[1
+                                67/64
+                                279/256
+                                9/8
+                                75/64
+                                39/32
+                                5/4
+                                167/128
+                                87/64
+                                45/32
+                                187/128
+                                3/2
+                                25/16
+                                417/256
+                                27/16
+                                7/4
+                                233/128
+                                15/8
+                                125/64]
+                             [4181/4096
+                              2178309/2097152
+                              17/16
+                              17711/16384
+                              9227465/8388608
+                              9/8
+                              75025/65536
+                              39088169/33554432
+                              305/256
+                              317811/262144
+                              165580141/134217728
+                              323/256
+                              1346269/1048576
+                              21/16
+                              5473/4096
+                              5702887/4194304
+                              89/64
+                              1449/1024
+                              24157817/16777216
+                              377/256
+                              98209/65536
+                              102334155/67108864
+                              1597/1024
+                              104005/65536
+                              13/8
+                              6765/4096
+                              1762289/1048576
+                              55/32
+                              28657/16384
+                              933147/524288
+                              233/128
+                              121393/65536
+                              31622993/16777216
+                              987/512
+                              514229/262144
+                              2/1])
+         reverse
+         (map :beat-freq)
+         frequencies
+         (sort-by second)
+         reverse)))
+(comment
+  (->> beat-data
+       (map (fn [[beats total]]
+              {:beat-hz (float beats) :factors (factorize beats) :instances total}))
+       (filter #(> (:instances %) 2))
+       (sort-by :beat-hz)))
+(do
+  (defn factorize
+    [n]
+    (-> n decompose-ratio :numer prime-factors))
+
+  (factorize 102334155/67108864))
 
 (for [a [1 2 3 4]
       b [1 2 3 4]]
