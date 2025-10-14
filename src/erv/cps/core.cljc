@@ -1,14 +1,15 @@
 (ns erv.cps.core
   ;;  TODO use https://github.com/Engelberg/ubergraph for the graphs
   (:require
+   #? (:cljs [goog.string :as gstr])
+   #? (:cljs [goog.string.format])
    [clojure.math.combinatorics :as combo]
    [clojure.set :as set]
    [clojure.spec.alpha :as s]
    [clojure.string :as str]
    [clojure.walk :as walk]
-   [erv.utils.core :refer [interval validate]]
-   #? (:cljs [goog.string :as gstr])
-   #? (:cljs [goog.string.format])))
+   [erv.utils.core :refer [validate]]
+   [erv.utils.scale :refer [+degree]]))
 
 #?(:cljs
    (def format gstr/format))
@@ -333,7 +334,8 @@
        set->maps
        (bound-ratio period norm-fac)
        (maps->data :bounded-ratio)
-       (+meta size factors norm-fac)))
+       (+meta size factors norm-fac)
+       (#(update % :scale +degree))))
 
 (defn +subcps [cps-data set-size factors-size]
   (let [{:keys [cps/size cps/factors period cps/normalized-by]} (:meta cps-data)]

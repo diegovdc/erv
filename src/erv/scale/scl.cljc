@@ -194,8 +194,9 @@
                                 (str/join "\n"))))))))
 
 (comment
-  (require '[erv.utils.ratios :refer [ratios->scale]])
-  (def scale-data (erv.cps.core/make 2 [1 3 5 7]))
+  (require '[erv.utils.ratios :refer [ratios->scale]]
+           '[erv.cps.core :as cps])
+  (def scale-data (cps/make 2 [1 3 5 7]))
 
   (println (make-kbm {:scale-data scale-data
                       :comments? false

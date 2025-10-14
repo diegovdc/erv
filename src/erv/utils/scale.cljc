@@ -3,11 +3,11 @@
    [clojure.math.combinatorics :as combo]
    [erv.utils.core :refer [decompose-ratios interval lcm-of-list period-reduce
                            rotate wrap-at]]
+   [erv.utils.impl :as impl]
    [erv.utils.ratios :refer [interval-seq->ratio-stack normalize-ratios
                              ratios->scale ratios-intervals]]))
 
-(defn +degree [scale]
-  (map-indexed (fn [i n] (assoc n :degree i)) scale))
+(def +degree #'impl/+degree)
 
 (defn degree-stack
   "Generate a stack ratios from a single (degree) generator"

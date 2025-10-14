@@ -7,7 +7,8 @@
       [com.gfredericks.exact :as e]
       [erv.utils.conversions :as conv]
       [erv.utils.core :refer [gcd-of-list interval period-reduce prime-factors
-                              round2]])]
+                              round2]]
+      [erv.utils.impl :as impl])]
     :cljs
     [(:require
       [clojure.string :as str]
@@ -142,7 +143,16 @@
                  {:ratio ratio
                   :bounded-ratio ratio
                   :bounding-period period})))
-        (sort-by :bounded-ratio))))
+        (sort-by :bounded-ratio)
+        impl/+degree)))
+
+(defn ratios->scale-data
+  ([ratios] (ratios->scale-data 2 ratios))
+  ([period ratios]
+   (let [scale (ratios->scale period ratios)]
+     {:meta {:period period
+             :size (count scale)}
+      :scale scale})))
 
 (defn ratios-intervals
   "Get the intervals between the ratios in the sequence.

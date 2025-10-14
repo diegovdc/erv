@@ -131,6 +131,23 @@
 (defn decompose-ratios
   ([ratios] (mapv decompose-ratio ratios)))
 
+(defn factorize-ratio
+  [n]
+  (-> n decompose-ratio
+      (update :numer prime-factors)
+      (update :denom prime-factors)))
+(do
+  (defn factors->hiccup
+    "Outputs hiccup with factors in power notation"
+    [factors]
+    (if-not (seq factors)
+      [:span 1]
+      (->> (frequencies factors)
+           (sort-by first)
+           (map (fn [[factor power]] [:span factor [:sup power]])))))
+  (factors->hiccup [3 3 7 5])
+  (factors->hiccup []))
+
 (defn make-map-by-key
   "Given a vector of hash-maps with a specific `k`, return a map of `k`->hash-map.
   The user is responsible for providing a unique `k`, otherwise data may be missing."
