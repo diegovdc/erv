@@ -145,7 +145,8 @@
                   :bounded-ratio ratio
                   :bounding-period period})))
         (sort-by :bounded-ratio)
-        impl/+degree)))
+        ;; impl/+degree
+        )))
 
 (defn ratios->scale-data
   ([ratios] (ratios->scale-data 2 ratios))
