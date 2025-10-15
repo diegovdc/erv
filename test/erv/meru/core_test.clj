@@ -8,7 +8,7 @@
            :mos/pattern.name "1s1L",
            :mos/sL-ratio.float (float 2.2702353),
            :mos/s.cents 366.9460706785318,
-           :mos/L.cents 833.0539293214687}
+           :mos/L.cents 833.0539293214689}
           {:size 3,
            :mos/pattern.name "2s1L",
            :mos/sL-ratio.float (float 1.2702353),

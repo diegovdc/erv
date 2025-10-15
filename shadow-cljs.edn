@@ -1,4 +1,4 @@
-{:source-paths ["src"]
+{:source-paths ["src" "test"]
  :dependencies [[binaryage/devtools "0.9.7"]
                 [cider/cider-nrepl "0.25.3"]
                 [com.taoensso/timbre "5.1.0"]
@@ -7,8 +7,13 @@
                 [com.gfredericks/exact "0.1.11"]
                 [org.clojure/math.combinatorics "0.1.6"]
                 [com.taoensso/timbre "4.10.0"]]
- :dev-http {5678 "build/browser"}
+ :dev-http {5678 "build/browser"
+            3001 "out/test"}
  :builds ; https://shadow-cljs.github.io/docs/UsersGuide.html#target-node-script
  {:lib {:target :node-library
         :output-to "dist/lib.js"
-        :exports-fn js.export-fn/generate-exports}}}
+        :exports-fn js.export-fn/generate-exports}
+  :browser-test {:target :browser-test
+                 :test-dir "out/test"}
+  :test {:target :node-test
+         :output-to "out/node-tests.js"}}}

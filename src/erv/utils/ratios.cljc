@@ -10,9 +10,11 @@
                               round2]]
       [erv.utils.impl :as impl])]
     :cljs
-    [(:require
+    [(:refer-clojure :exclude [> < + -  * / -  numerator denominator integer?
+                               mod rem quot even? odd?])
+     (:require
       [clojure.string :as str]
-      [com.gfredericks.exact :as e]
+      [com.gfredericks.exact :as e :refer [> < + -  * / - mod]]
       [erv.utils.conversions :as conv]
       [erv.utils.core :refer [interval period-reduce round2 prime-factors]]
       [erv.utils.impl :as impl])]))

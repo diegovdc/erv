@@ -1,7 +1,11 @@
 (ns erv.utils.core
+  #?(:cljs   (:refer-clojure :exclude [> >= < <= = + - * /  -compare compare numerator denominator integer?
+                                       mod rem quot even? odd?]))
   (:require
+   [clojure.core :as core]
    [clojure.set :as set]
-   [clojure.spec.alpha :as s]))
+   [clojure.spec.alpha :as s]
+   #?(:cljs [com.gfredericks.exact :as e :refer [> < = + -  * / rem mod]])))
 
 (defn validate [spec input]
   (or (s/valid? spec input)
@@ -9,9 +13,8 @@
 
 (defn wrap-at [i coll]
   (let [size (count coll)
-        i* (if (zero? size) 0 (mod i size))]
+        i* (if (zero? size) 0 (core/mod i size))]
     (nth coll i* nil)))
-
 (defn round2
   "Round a double to the given precision (number of significant digits)"
   [precision d]
@@ -20,7 +23,7 @@
 
 (defn rotate [xs n]
   (let [l (count xs)
-        off (mod (+ (mod n l) l) l)]
+        off (core/mod (core/+ (core/mod n l) l) l)]
     (concat (drop off xs) (take off xs))))
 
 (defn get-all-rotations [pattern]
@@ -55,12 +58,15 @@
 (defn period-reduce
   ([ratio] (period-reduce 2 ratio))
   ([period ratio]
-   (loop [ratio ratio]
-     (cond
-       (> period ratio 1) ratio
-       (or (= period ratio) (= 1 ratio)) 1
-       (> ratio period) (recur (/ ratio period))
-       (< ratio period) (recur (* ratio period))))))
+   (let [one #?(:clj 1 :cljs (e/native->integer 1))
+         period* #?(:clj period :cljs (e/native->integer period))]
+     (loop [ratio ratio]
+       (cond
+         (> period* ratio one) ratio
+         (or (= period* ratio) (= one ratio)) one
+         (> ratio period*) (recur (/ ratio period*))
+         (< ratio period*) (recur (* ratio period*)))))))
+
 
 (defn indexes-of [el coll] (keep-indexed #(when (= el %2) %1) coll))
 
@@ -75,7 +81,7 @@
 (defn pattern->degrees
   [pattern]
   (->> pattern
-       (reduce (fn [acc el] (conj acc (+ el (last acc))))
+       (reduce (fn [acc el] (conj acc (core/+ el (last acc))))
                [0])
        drop-last))
 
