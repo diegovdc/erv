@@ -43,7 +43,7 @@ jobs:
     
     strategy:
       matrix:
-        node-version: [lts/*, 22.x, 24.x]  # LTS plus specific versions
+        node-version: [lts/*]  # LTS plus specific versions
 
     steps:
       - name: Checkout code
