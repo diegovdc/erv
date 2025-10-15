@@ -1,4 +1,4 @@
-(ns erv.utils.parse
+(ns erv.utils.exact
   "Parse numbers into ratios using `gfredericks/exact`"
   (:require
    [clojure.string :as str]
