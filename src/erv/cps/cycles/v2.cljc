@@ -170,12 +170,13 @@
                   (str/join " - ")))
        (str/join "\n")
        (spit "eikosany-harmonic-triad-cycles-of-A.B.C.txt")))
+(comment
 
-(->> hexany
-     :meta
-     :cps/factors
-     (map-indexed
-      (fn
-        [i fac]
-        {fac (str (char (+ 65 i)))}))
-     (into {}))
+  (->> hexany
+       :meta
+       :cps/factors
+       (map-indexed
+        (fn
+          [i fac]
+          {fac (str (char (+ 65 i)))}))
+       (into {})))

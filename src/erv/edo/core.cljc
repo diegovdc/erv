@@ -24,11 +24,11 @@
   (def submosi (make-all-submos (mos 6) 5))
   (do)
   (def submos) (-> submosi #_(->> (filter :true-submos?))
-                   #_ #_ (nth 0) :submos
-                   #_ #_           (nth 1) :mos)
+                   #_#_(nth 0) :submos
+                   #_#_(nth 1) :mos)
   (demo! (:scale (from-pattern submos)) :note-dur 200 :direction :down)
   (demo! (:scale (from-pattern [3,5,2,5,3,5,4])) :note-dur 200 :direction :down)
-  (demo! (:scale (from-pattern[6, 3, 4, 3, 7, 4, 3, 1] 2)) :note-dur 200 :direction :up ))
+  (demo! (:scale (from-pattern [6, 3, 4, 3, 7, 4, 3, 1] 2)) :note-dur 200 :direction :up))
 
 (defn from-pattern
   "For use with `mos` patterns or other custom intervalic patterns, i.e. [3 2 3 2 2]"
@@ -47,5 +47,4 @@
                              :bounding-period period})
                           degrees)})))
 
-
-(from-pattern [ 2, 2, 5, 2, 5, 2, 5, 2, 2, 5, 2, 5, 2, 5, 2, 5])
+(from-pattern [2, 2, 5, 2, 5, 2, 5, 2, 2, 5, 2, 5, 2, 5, 2, 5])

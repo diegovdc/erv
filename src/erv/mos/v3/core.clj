@@ -89,8 +89,7 @@
              :meta)
        #_(comp (partial map :bounded-ratio) :scale)
        (gen->mos-ratios 11/8
-                        (rationalize (round2 4 (erv.utils.conversions/cents->ratio 400)))
-                        50))
+                        (rationalize (round2 4 (erv.utils.conversions/cents->ratio 400))) 50))
   #_(map count (gen->mos 3/2 2 12)))
 
 (comment

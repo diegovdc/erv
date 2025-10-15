@@ -120,3 +120,23 @@
   "Find the greatest common divisor of a list of numbers"
   [nums]
   (reduce gcd nums))
+
+(defn decompose-ratio
+  ([ratio] #?(:clj (try
+                     {:numer (numerator ratio) :denom (denominator ratio)}
+                     (catch Exception _
+                       {:numer ratio :denom 1}))
+              :cljs {:numer ratio :denom 1})))
+
+(defn decompose-ratios
+  ([ratios] (mapv decompose-ratio ratios)))
+
+(defn make-map-by-key
+  "Given a vector of hash-maps with a specific `k`, return a map of `k`->hash-map.
+  The user is responsible for providing a unique `k`, otherwise data may be missing."
+  [key-fn maps]
+  (reduce
+   (fn [acc m]
+     (assoc acc (key-fn m) m))
+   {}
+   maps))

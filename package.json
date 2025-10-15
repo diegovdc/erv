@@ -1,6 +1,6 @@
 {
   "name": "@diegovdc/erv",
-  "version": "0.0.8",
+  "version": "0.0.14",
   "description": "Calculations and other algorithmic treatments of some of [Erv Wilson's](http://anaphoria.com/wilson.html) music scale theories.",
   "scripts": {
     "release:lib": "shadow-cljs release lib; sed -i '' 's/global/globalThis/g' dist/lib.js",
@@ -8,6 +8,9 @@
     "prepublishOnly": "npm run release:lib"
   },
   "main": "dist/lib.js",
+   "files": [
+    "dist/"
+  ],
   "keywords": [
     "microtonality",
     "music theory"
