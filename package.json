@@ -5,7 +5,8 @@
   "scripts": {
     "release:lib": "shadow-cljs release lib; sed -i '' 's/global/globalThis/g' dist/lib.js",
     "watch:lib": "shadow-cljs watch lib",
-    "prepublishOnly": "npm run release:lib"
+    "prepublishOnly": "npm run release:lib",
+    "test": "npx shadow-cljs compile test && node out/node-tests.js"
   },
   "main": "dist/lib.js",
    "files": [
