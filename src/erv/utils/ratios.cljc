@@ -14,7 +14,8 @@
       [clojure.string :as str]
       [com.gfredericks.exact :as e]
       [erv.utils.conversions :as conv]
-      [erv.utils.core :refer [interval period-reduce round2 prime-factors]])]))
+      [erv.utils.core :refer [interval period-reduce round2 prime-factors]]
+      [erv.utils.impl :as impl])]))
 
 (defn ratio-proximity-list
   "Make a list of `ratios` that approximate a `target-ratio` in a list of `target-ratios`"
