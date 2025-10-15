@@ -17,7 +17,7 @@
     "music theory"
   ],
   "devDependencies": {
-    "shadow-cljs": "2.25.4"
+    "shadow-cljs": "3.2.1"
   },
   "license": "GNU GLP v3.0",
   "dependencies": {}

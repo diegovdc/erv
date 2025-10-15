@@ -1,12 +1,5 @@
-{:source-paths ["src" "test"]
- :dependencies [[binaryage/devtools "0.9.7"]
-                [cider/cider-nrepl "0.25.3"]
-                [com.taoensso/timbre "5.1.0"]
-                [refactor-nrepl "2.5.0"]
-                [table/table "0.5.0"]
-                [com.gfredericks/exact "0.1.11"]
-                [org.clojure/math.combinatorics "0.1.6"]
-                [com.taoensso/timbre "4.10.0"]]
+{;; :source-paths ["src" "test"]
+ :deps {:aliases [:cljs]}
  :dev-http {5678 "build/browser"
             3001 "out/test"}
  :builds ; https://shadow-cljs.github.io/docs/UsersGuide.html#target-node-script
