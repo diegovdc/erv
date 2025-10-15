@@ -34,15 +34,15 @@ https://en.xen.wiki/w/MOS_scale
 (def generator 13)
 (def my-mos (mos/make period generator))
 (submos/make-all-submos (nth my-mos 3) generator) ;; this will generate all secondary MOS and all possible "traverse" MOS
-
-
-
 ```
 
 
 ## Note
-This library is a work in progress and mostly a workshop for myself, so the code is not polished as it should. If you are using this library, feel free to let make me aware of so that I can take more care of the code and the documentation.
+This library is a work in progress and mostly a workshop for myself, so the code is not polished as it should. If you are using this library, feel free to let make me aware of it so that I can take more care of the code and the documentation.
 
+
+## Development
+On `emacs` one can run `cider-jackin-clj&cljs` then select the `shadow-cljs` server and the `:browser-build`. 
 
 ## License
 
