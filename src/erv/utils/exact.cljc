@@ -2,6 +2,7 @@
   "Parse numbers into ratios using `gfredericks/exact`"
   (:require
    [clojure.string :as str]
+   [clojure.walk :as walk]
    [com.gfredericks.exact :as e]))
 
 (defn- parseable-ratio?
@@ -42,3 +43,14 @@
                           {:input exact-int-or-ratio}))))
 
 #_(map print-ratio (parse-scale "1   3/2\n 8/7"))
+
+(defn make-readable
+  "Takes a walkeable structure and converts all exact instances to a readable string"
+  [coll]
+  (walk/postwalk
+   (fn [x]
+     (if (or (e/integer? x)
+             (e/ratio? x))
+       (exact->string x)
+       x))
+   coll))

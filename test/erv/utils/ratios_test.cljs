@@ -1,7 +1,7 @@
 (ns erv.utils.ratios-test
   (:require
    [cljs.test :refer [deftest is]]
-   [erv.utils.parse :refer [exact->string parse-scale]]
+   [erv.utils.exact :refer [exact->string parse-scale]]
    [erv.utils.ratios :refer [ratios->scale]]))
 
 (deftest ratios->scale-test
