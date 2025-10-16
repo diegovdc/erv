@@ -1,8 +1,13 @@
 (ns erv.utils.scale
+  #?(:cljs (:refer-clojure :exclude [+ -  * / -  numerator denominator integer?
+                                     mod rem quot even? odd?]))
   (:require
+   #?(:cljs [com.gfredericks.exact :as e :refer [* + - - /]])
+   [clojure.core :as core]
    [clojure.math.combinatorics :as combo]
    [erv.utils.core :refer [decompose-ratios interval lcm-of-list period-reduce
                            rotate wrap-at]]
+   [erv.utils.exact :as exact.utils]
    [erv.utils.impl :as impl]
    [erv.utils.ratios :refer [interval-seq->ratio-stack normalize-ratios
                              ratios->scale ratios-intervals]]))
@@ -18,7 +23,7 @@
              ratio-subset #{}
              offset offset
              gen-index 0]
-             (let [i (mod offset (count scale))
+             (let [i (core/mod offset (count scale))
                    new-note (assoc (nth scale i)
                                    :gen/index gen-index)
                    ratio (:bounded-ratio new-note)]
@@ -26,7 +31,7 @@
                  subset
                  (recur (conj subset new-note)
                         (conj ratio-subset ratio)
-                        (+ offset gen)
+                        (core/+ offset gen)
                         (inc gen-index)))))))
 
 (defn scale-intervals
@@ -47,7 +52,7 @@
 (defn tritriadic
   "Make a scale from stacking a triad three times.
   https://en.xen.wiki/w/Tritriadic_scale"
-  ([triad-ratios] (tritriadic 2 triad-ratios))
+  ([triad-ratios] (tritriadic (exact.utils/->exact 2) triad-ratios))
   ([period triad-ratios]
    (let [triad-ratios (normalize-ratios period triad-ratios)]
      {:meta {:scale :tritriadic
@@ -73,6 +78,7 @@
                        (ratios->scale period))
                   distinct)]
     {:meta {:scale :stacked-subscale
+            :period period
             :intervals (scale-intervals scale)
             :parent-scale scale
             :gen gen
@@ -110,10 +116,11 @@
 (defn cross-set
   [period & ratio-vecs]
   (let [scale (->> ratio-vecs
+                   #?(:cljs (map (partial map exact.utils/->exact)))
                    (apply combo/cartesian-product)
                    (map #(apply * %))
                    flatten
-                   (ratios->scale period)
+                   (ratios->scale (exact.utils/->exact period))
                    dedupe-scale)]
     {:meta {:scale :cross-set
             :sets ratio-vecs
@@ -134,12 +141,12 @@
                                  scale)
                   total-subset (count subset-set)
                   total-subscale (count subscale)]
-              (when (<= (- total-subset total-subscale)
-                        max-missing-notes)
+              (when (core/<= (core/- total-subset total-subscale)
+                             max-missing-notes)
                 (let [degrees (map :rotated-scale/original-degree subscale)
                       matched-ratios (map :matched-ratio subscale)]
                   {:degrees degrees
-                   :matched (/ total-subscale total-subset)
+                   :matched (core// total-subscale total-subset)
                    :subscale/matched-ratios matched-ratios}))))
           scale-rotations)))
 
@@ -152,13 +159,14 @@
   ([scale-steps] (scale-steps->degrees scale-steps true))
   ([scale-steps remove-octave?]
    (->> scale-steps
-        (reduce (fn [acc n] (conj acc (+ n (or (last acc) 0))))
+        (reduce (fn [acc n] (conj acc (core/+ n (or (last acc) 0))))
                 [0])
         (drop-last (if remove-octave? 1 0)))))
 
 (defn diamond
-  [period & factors]
-  (let [scale (->> (combo/cartesian-product factors factors)
+  [period factors]
+  (let [factors (map exact.utils/->exact factors)
+        scale (->> (combo/cartesian-product factors factors)
                    (mapv (fn [[a b]] (/ a b)))
                    (ratios->scale period)
                    dedupe-scale)]

@@ -138,11 +138,11 @@
   ([ratios] (ratios->scale 2 ratios))
   ([period ratios]
    (->> ratios
-        (map (fn [r]
-               (let [ratio (period-reduce period r)]
-                 {:ratio ratio
-                  :bounded-ratio ratio
-                  :bounding-period period})))
+        (mapv (fn [r]
+                (let [ratio (period-reduce period r)]
+                  {:ratio ratio
+                   :bounded-ratio ratio
+                   :bounding-period (exact.utils/->exact period)})))
         (sort-by :bounded-ratio)
         ;; impl/+degree ;; TODO: should this be used here?
         )))

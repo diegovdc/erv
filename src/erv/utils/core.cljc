@@ -2,7 +2,7 @@
   #?(:cljs   (:refer-clojure :exclude [> >= < <= = + - * /  -compare compare numerator denominator integer?
                                        mod rem quot even? odd? pos? zero? inc]))
   (:require
-   #?(:cljs [com.gfredericks.exact :as e :refer [* / < = > mod rem zero? inc]])
+   #?(:cljs [com.gfredericks.exact :as e :refer [* / < = > mod rem zero? inc numerator denominator]])
    [clojure.core :as core]
    [clojure.set :as set]
    [clojure.spec.alpha :as s]
@@ -64,12 +64,12 @@
 (defn period-reduce
   ([ratio] (period-reduce 2 ratio))
   ([period ratio]
-   (let [one #?(:clj 1 :cljs (e/native->integer 1))
-         period* #?(:clj period :cljs (e/native->integer period))]
+   (let [_1 (exact.utils/->exact 1)
+         period* (exact.utils/->exact period)]
      (loop [ratio ratio]
        (cond
-         (> period* ratio one) ratio
-         (or (= period* ratio) (= one ratio)) one
+         (> period* ratio _1) ratio
+         (or (= period* ratio) (= _1 ratio)) _1
          (> ratio period*) (recur (/ ratio period*))
          (< ratio period*) (recur (* ratio period*)))))))
 
@@ -145,11 +145,11 @@
   (reduce gcd nums))
 
 (defn decompose-ratio
-  ([ratio] #?(:clj (try
-                     {:numer (numerator ratio) :denom (denominator ratio)}
-                     (catch Exception _
-                       {:numer ratio :denom 1}))
-              :cljs {:numer ratio :denom 1})))
+  ([ratio]
+   (try
+     {:numer (numerator ratio) :denom (denominator ratio)}
+     (catch #?(:clj Exception :cljs js/Error) _
+       {:numer ratio :denom (exact.utils/->exact 1)}))))
 
 (defn decompose-ratios
   ([ratios] (mapv decompose-ratio ratios)))

@@ -53,6 +53,7 @@
 (deftest scale->stacked-subscale-test
   (is (= {:meta
           {:scale :stacked-subscale
+           :period 4
            :intervals [3/2 4/3 3/2 4/3],
            :parent-scale
            [{:ratio 1, :bounded-ratio 1, :bounding-period 4}
@@ -234,11 +235,11 @@
            {:bounded-ratio 7/4 :bounding-period 2 :ratio 7/4}
            {:bounded-ratio 16/9 :bounding-period 2 :ratio 16/9}
            {:bounded-ratio 9/5 :bounding-period 2 :ratio 9/5}]}
-         (diamond 2 1 3 5 7 9)))
+         (diamond 2 [1 3 5 7 9])))
 
   (testing "A `diamond` is a special case of `cross-set`"
     (is (=
-         (map :bounded-ratio (:scale (diamond 2 1 3 5 7 9)))
+         (map :bounded-ratio (:scale (diamond 2 [1 3 5 7 9])))
          (map :bounded-ratio (:scale (cross-set 2
                                                 [1 3 5 7 9]
                                                 (map #(/ 1 %) [1 3 5 7 9]))))))))
