@@ -1,11 +1,12 @@
 (ns erv.utils.core
   #?(:cljs   (:refer-clojure :exclude [> >= < <= = + - * /  -compare compare numerator denominator integer?
-                                       mod rem quot even? odd?]))
+                                       mod rem quot even? odd? pos? zero? inc]))
   (:require
+   #?(:cljs [com.gfredericks.exact :as e :refer [* / < = > mod rem zero? inc]])
    [clojure.core :as core]
    [clojure.set :as set]
    [clojure.spec.alpha :as s]
-   #?(:cljs [com.gfredericks.exact :as e :refer [> < = + -  * / rem mod]])))
+   [erv.utils.exact :as exact.utils]))
 
 (defn validate [spec input]
   (or (s/valid? spec input)
@@ -13,8 +14,9 @@
 
 (defn wrap-at [i coll]
   (let [size (count coll)
-        i* (if (zero? size) 0 (core/mod i size))]
+        i* (if (core/zero? size) 0 (core/mod i size))]
     (nth coll i* nil)))
+
 (defn round2
   "Round a double to the given precision (number of significant digits)"
   [precision d]
@@ -34,14 +36,18 @@
   (filter #(= 0 (rem n %)) (range 2 n)))
 
 (defn prime-factors [n]
-  (loop [n n divisor 2 factors []]
-    (if (< n 2)
-      factors
-      (if (zero? (rem n divisor))
-        (recur (/ n divisor) divisor (conj factors divisor))
-        (recur n (inc divisor) factors)))))
+  (let [_2 (exact.utils/->exact 2)]
+    (loop [n n
+           divisor _2
+           factors []]
+      (if (< n _2)
+        factors
+        (if (zero? (rem n divisor))
+          (recur (/ n divisor) divisor (conj factors divisor))
+          (recur n (inc divisor) factors))))))
+
 (comment
-  (prime-factors 2))
+  (prime-factors (exact.utils/->exact 1)))
 
 (defn coprime? [& ns]
   (->> ns (map (comp set prime-factors)) (apply set/intersection) empty?))
@@ -66,7 +72,6 @@
          (or (= period* ratio) (= one ratio)) one
          (> ratio period*) (recur (/ ratio period*))
          (< ratio period*) (recur (* ratio period*)))))))
-
 
 (defn indexes-of [el coll] (keep-indexed #(when (= el %2) %1) coll))
 
@@ -102,18 +107,30 @@
      indexes)))
 
 ;; TODO add tests
-(defn gcd
+(defn gcd*
   "Greatest common divisor"
   [a b]
   (if (zero? b)
     a
     (recur b (mod a b))))
 
+(defn gcd
+  "Greatest common divisor"
+  [a b]
+  (gcd* (exact.utils/->exact a)
+        (exact.utils/->exact b)))
+
 ;; TODO add tests
-(defn lcm
+(defn lcm*
   "Least common multiple"
   [a b]
   (/ (* a b) (gcd a b)))
+
+(defn lcm
+  "Least common multiple"
+  [a b]
+  (lcm* (exact.utils/->exact a)
+        (exact.utils/->exact b)))
 
 ;; TODO add tests
 (defn lcm-of-list

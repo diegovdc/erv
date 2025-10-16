@@ -55,7 +55,8 @@
       :scale  (ratios->scale period
                              (map #(* (last triad-ratios) %)
                                   (interval-seq->ratio-stack
-                                   (ratios-intervals triad-ratios) 7)))})))
+                                   7
+                                   (ratios-intervals triad-ratios))))})))
 
 (defn scale->stacked-subscale
   "Make a scale from a stack of generator steps from a parent scale.
@@ -68,8 +69,8 @@
                    :offset offset}
                   degree-stack
                   scale-intervals
-                  (interval-seq->ratio-stack size)
-                  (->> (ratios->scale period))
+                  (->> (interval-seq->ratio-stack size)
+                       (ratios->scale period))
                   distinct)]
     {:meta {:scale :stacked-subscale
             :intervals (scale-intervals scale)

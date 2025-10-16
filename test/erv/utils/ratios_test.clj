@@ -18,7 +18,7 @@
 
 (deftest interval-seq->ratio-stack-test
   (is (= [1 3/2 2N 3N 4N 6N 8N]
-         (interval-seq->ratio-stack [3/2 4/3] 7))))
+         (interval-seq->ratio-stack 7 [3/2 4/3]))))
 
 (deftest normalize-ratios-test
   (is (=  [1 7/6 3/2]

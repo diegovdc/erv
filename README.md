@@ -41,6 +41,9 @@ https://en.xen.wiki/w/MOS_scale
 This library is a work in progress and mostly a workshop for myself, so the code is not polished as it should. If you are using this library, feel free to let make me aware of it so that I can take more care of the code and the documentation.
 
 
+## To Do
+- [ ] In JS, by using exact, operations involving floating point or double instances may be broken as they expect the source to be strings containing parseable integers or rationals. Floating point support needs to be tested and supported.
+
 ## Development
 On `emacs` one can run `cider-jackin-clj&cljs` then select the `shadow-cljs` server and the `:browser-build`. 
 

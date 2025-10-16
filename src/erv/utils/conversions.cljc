@@ -1,8 +1,11 @@
 (ns erv.utils.conversions
-  (:require [erv.utils.core :refer [round2]]))
+  (:require
+   [clojure.math :refer [log]]
+   [erv.utils.core :refer [round2]]
+   [erv.utils.exact :as exact.utils]))
 
 (defn ratio->cents [ratio]
-  (-> (Math/log ratio) (/ (Math/log 2)) (* 1200)))
+  (-> (log (exact.utils/->native ratio)) (/ (log 2)) (* 1200)))
 
 (defn cents->ratio [cents]
   (-> (/ cents 1200) (* (Math/log 2)) Math/exp))
