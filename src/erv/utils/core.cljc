@@ -77,13 +77,32 @@
 
 (defn indexes-of [el coll] (keep-indexed #(when (= el %2) %1) coll))
 
-(defn ^:export pow [n power]
-  (when-not (int? power)
-    (throw (ex-info "`power` must be an int" {:power power})))
-  (cond
-    (zero? power) 1
-    (> power 0) (apply * (repeat power n))
-    :else (apply / 1 (repeat (abs power) n))))
+#?(:clj
+   (defn ^:export pow [n power]
+     (when-not (int? power)
+       (throw (ex-info "`power` must be an int" {:power power})))
+     (cond
+       (zero? power) 1
+       (> power 0) (apply * (repeat power n))
+       :else (apply / 1 (repeat (abs power) n))))
+   :cljs
+   (defn ^:export pow [n power]
+     (when-not (int? power)
+       (throw (ex-info "`power` must be an int" {:power power})))
+     (let [n (exact.utils/->exact n)
+           power (exact.utils/->exact power)]
+       (cond
+         (zero? power) (exact.utils/->exact 1)
+         (> power (exact.utils/->exact 0)) (apply * (repeat power n))
+         :else (apply / (repeat (abs power) n))))))
+(comment
+  (pow (exact.utils/->exact 2)
+       (exact.utils/->exact 0))
+  (pow (exact.utils/->exact 2)
+       (exact.utils/->exact 3))
+  (pow (exact.utils/->exact 2)
+       (exact.utils/->exact -3))
+  (pow 2 -3))
 
 (defn pattern->degrees
   [pattern]

@@ -1,7 +1,7 @@
 (ns erv.utils.exact
   "Parse numbers into ratios using `gfredericks/exact`. Also provides helpers for working around `exact` based numbers."
   (:require
-   [clojure.math :refer [pow]]
+   #?(:cljs [clojure.math :refer [pow]])
    [clojure.string :as str]
    [clojure.walk :as walk]
    [com.gfredericks.exact :as e]))
