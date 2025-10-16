@@ -36,7 +36,8 @@
   (filter #(= 0 (rem n %)) (range 2 n)))
 
 (defn prime-factors [n]
-  (let [_2 (exact.utils/->exact 2)]
+  (let [_2 (exact.utils/->exact 2)
+        n (exact.utils/->exact n)]
     (loop [n n
            divisor _2
            factors []]
@@ -47,7 +48,8 @@
           (recur n (inc divisor) factors))))))
 
 (comment
-  (prime-factors (exact.utils/->exact 1)))
+  (prime-factors (exact.utils/->exact 1))
+  (prime-factors 1))
 
 (defn coprime? [& ns]
   (->> ns (map (comp set prime-factors)) (apply set/intersection) empty?))

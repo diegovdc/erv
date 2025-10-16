@@ -1,6 +1,7 @@
 (ns erv.utils.exact
   "Parse numbers into ratios using `gfredericks/exact`. Also provides helpers for working around `exact` based numbers."
   (:require
+   [clojure.math :refer [pow]]
    [clojure.string :as str]
    [clojure.walk :as walk]
    [com.gfredericks.exact :as e]))
@@ -56,6 +57,10 @@
     :else (throw (ex-info "Don't know how to turn value into number"
                           {:value x}))))
 
+(defn exact?
+  [x]
+  (or (e/integer? x) (e/ratio? x)))
+
 (defn parse-ratios
   "Parses a string of ratios separated by `,` or whitespaces"
   [ratios-str]
@@ -87,3 +92,11 @@
        (exact->string x)
        x))
    coll))
+
+#?(:cljs
+   (defn rationalize
+     [num]
+     (let [decimal-places (-> num str (str/split ".") last count)
+           denom (int (pow 10 decimal-places))]
+       (e// (e/native->integer (* denom num))
+            (e/native->integer denom)))))

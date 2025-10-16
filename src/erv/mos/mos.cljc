@@ -13,8 +13,10 @@
     common factors other than 1.
   5. The numerator (generator) and denominator (period) representing MOS are
      also co-prime."
-  (:require [taoensso.timbre :as timbre]
-            [erv.utils.core :refer [coprime?]]))
+  (:require
+   [erv.utils.core :refer [coprime?]]
+   [erv.utils.exact :as exact.utils]
+   [taoensso.timbre :as timbre]))
 
 (do
   ;; TODO, find a proper name and move to utils; called `degs->scale` in mawra.core
@@ -39,12 +41,11 @@
         (fn [{:keys [moses waiting]} point]
           (let [points (into [] (sort (concat waiting (last moses) [point])))
                 intervals (get-diffs points)]
-            (->> intervals frequencies vals (apply coprime?))
             (cond
               (= #{1 2} (set intervals)) ;; NOTE Do we really not want any more MOS?
               (reduced {:moses (conj moses points) :waiting []})
               (and (<= (count (set intervals)) 2)
-                   (->> intervals frequencies vals (apply coprime?)))
+                   (->> intervals frequencies vals (map exact.utils/->exact) (apply coprime?)))
               {:moses (conj moses points) :waiting []}
               :else
               {:moses moses :waiting (conj waiting point)})))
@@ -61,7 +62,8 @@
 (def make-mos
   (memoize
    (fn [period generator]
-     (let [true-mos? (coprime? period generator)]
+     (let [true-mos? (coprime? (exact.utils/->exact period)
+                               (exact.utils/->exact generator))]
        (when-not true-mos?
          (timbre/warn "The generated data is not a true MOS because the period (" period ") and generator (" generator ") are not coprime."))
        (with-meta
@@ -70,4 +72,4 @@
               mos-as-intervals)
          {:true-mos? true-mos?})))))
 
-(def make make-mos)
+(def make #'make-mos)
