@@ -167,10 +167,20 @@
 
 (defn decompose-ratio
   ([ratio]
-   (try
-     {:numer (numerator ratio) :denom (denominator ratio)}
-     (catch #?(:clj Exception :cljs js/Error) _
-       {:numer ratio :denom (exact.utils/->exact 1)}))))
+   ;; NOTE the following code does not work in prod, as e/numerator returns nil and doesn't throw on integers
+   ;; keeping the code here for documentation purposes and to avoid any refactoring to a similar procedure
+   #_(try
+       {:numer (numerator ratio) :denom (denominator ratio)}
+       (catch #?(:clj Exception :cljs js/Error) _
+         {:numer ratio :denom (exact.utils/->exact 1)}))
+   #?(:cljs
+      (cond
+        (e/integer? ratio) {:numer ratio :denom (exact.utils/->exact 1)}
+        (e/ratio? ratio) {:numer (numerator ratio) :denom (denominator ratio)})
+      :clj
+      (cond
+        (int? ratio) {:numer ratio :denom 1}
+        (ratio? ratio) {:numer (numerator ratio) :denom (denominator ratio)}))))
 
 (defn decompose-ratios
   ([ratios] (mapv decompose-ratio ratios)))
