@@ -41,10 +41,13 @@
   "If note is not exactly in 12ET it adds a suffix to the note with the upwards deviation in cents.
   i.e. 60.4 -> C3+40"
   [midi]
-  (let [deviation (-> (mod midi 1)
-                      (->> (round2 2))
-                      (* 100)
-                      int)
+  (let [deviation (->
+                   midi
+                   (exact.utils/->native)
+                   (mod  1)
+                   (->> (round2 2))
+                   (* 100)
+                   int)
         octave (get-octave midi)]
     (str (nth note-names (mod (int midi) 12))
          octave
