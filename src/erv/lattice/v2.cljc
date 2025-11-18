@@ -20,8 +20,8 @@
 
 (defn make-coords [base-coords numerator-factors denominator-factors]
   (let [numer-coords (reduce (fn [{:keys [x y]} factor]
-                               {:x (+ x (get-in base-coords [factor :x]))
-                                :y (+ y (get-in base-coords [factor :y]))})
+                               {:x (clojure.core/+ x (get-in base-coords [factor :x]))
+                                :y (clojure.core/+ y (get-in base-coords [factor :y]))})
                              {:x 0 :y 0}
                              numerator-factors)]
     (reduce (fn [{:keys [x y]} factor]
@@ -39,9 +39,6 @@
             :numer-factors numer-factors
             :denom-factors denom-factors
             :coords (make-coords base-coords numer-factors denom-factors)}}))
-
-(comment
-  (ratio->lattice-point))
 
 (defn get-point-data-difference
   "`factor-type` should be `:numer-factors` or `:denom-factors`"
@@ -64,10 +61,8 @@
 
 (defn custom-connection?
   [period point-data1 point-data2 custom-edges]
-  ;; (println (->> point-data1 :ratio) period)
   (let [r1 (->> point-data1 :ratio (period-reduce period))
         r2 (->> point-data2 :ratio (period-reduce period))]
-    ;; (println (->> point-data1 :ratio))
     (custom-edges
      (period-reduce period (/ r1 r2)))))
 
@@ -90,20 +85,18 @@
 
 (defn make-connection
   [diff-count-set connections-set period point-data1 point-data2 custom-edges]
-  #_(println period point-data1 point-data2)
   (let [diffs (partial get-point-data-difference
                        period
                        point-data1
                        point-data2)
-        ;; _ (println "PPPPPPPPPPDDDDDD")
-        get-diff-count (comp #(apply + %) vals)
+        get-diff-count (comp #(apply clojure.core/+ %) vals)
         num-diff  (diffs :numer-factors)
         denom-diff (diffs :denom-factors)
-        diff (diff-count-set (+ (get-diff-count num-diff)
-                                (get-diff-count denom-diff)))
-        ;; _ (println "BBBBBBBCBBBBCCCCC?")
+        diff (diff-count-set (clojure.core/+ (get-diff-count num-diff)
+                                             (get-diff-count denom-diff)))
+
         custom? (custom-connection? period point-data1 point-data2 custom-edges)]
-    ;; (println "CCCCCCCCCCCCCCCC?")
+
     (if (or diff custom?)
       (let [points #{(:ratio point-data1)
                      (:ratio point-data2)}]
@@ -173,7 +166,6 @@
             max-distance (apply max distances-set)
             updated-edges (reduce
                            (fn [edges* node]
-                             ;; (println "MMMMMMMMMMMMMMMMC")
                              (make-connection distances-set
                                               edges*
                                               period
@@ -182,7 +174,6 @@
                                               custom-edges))
                            edges
                            ns)]
-        ;; (println updated-edges)
         (if
          (and (not (ref-ratio-in-ratio-edges? (:ratio ref-node) updated-edges))
               (<= max-distance (count combined-nodes)))
@@ -200,7 +191,6 @@
          coords-data-map (->> ratios
                               (map #(ratio->lattice-point % base-coords))
                               (into {}))
-         ;; _ (println coords-data-map)
          coords-data (vals coords-data-map)
          coords (->> coords-data
                      (map :coords))
@@ -208,7 +198,6 @@
          max-x (->> coords (map :x) (apply max))
          min-y (->> coords (map :y) (apply min))
          max-y (->> coords (map :y) (apply max))
-         ;; _ (println "+++++++++++")
          edges (->> coords-data-map
                     combine-nodes
                     (#(connect-nodes period % {:custom-edges custom-edges}))
@@ -225,6 +214,8 @@
       :edges edges})))
 
 (comment
+  (exact.utils/make-readable (ratios->lattice-data base-coords
+                                                   (exact.utils/parse-ratios "3/2 9/8 2/1")))
   (ratios->lattice-data base-coords #_["1/1" "15/14" "5/4" "10/7" "3/2" "12/7"]
                         (map exact.utils/parse-ratio ["1/1"
                                                       "80/77"
