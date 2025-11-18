@@ -165,6 +165,8 @@
   [nums]
   (reduce gcd nums))
 
+(defn intish? [n] (= n (int n)))
+
 (defn decompose-ratio
   ([ratio]
    ;; NOTE the following code does not work in prod, as e/numerator returns nil and doesn't throw on integers
@@ -179,9 +181,10 @@
         (e/ratio? ratio) {:numer (numerator ratio) :denom (denominator ratio)})
       :clj
       (cond
-        (int? ratio) {:numer ratio :denom 1}
+        (intish? ratio) {:numer ratio :denom 1}
         (ratio? ratio) {:numer (numerator ratio) :denom (denominator ratio)}))))
-
+(comment
+  (decompose-ratio 21/16))
 (defn decompose-ratios
   ([ratios] (mapv decompose-ratio ratios)))
 
