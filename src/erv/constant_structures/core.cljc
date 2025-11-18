@@ -1,17 +1,21 @@
 (ns erv.constant-structures.core
   "A constant structure is a scale where every interval is subtended by the same number of steps."
+  #?(:cljs (:refer-clojure :exclude [* / <]))
   (:require
+   #?(:cljs [com.gfredericks.exact :as e :refer [/ * <]])
    [clojure.math.combinatorics :as combo]
    [erv.cps.core :as cps]
-   [erv.edo.core :as edo]
-   [erv.utils.core :refer [interval round2]]))
+   [erv.utils.core :refer [interval round2]]
+   [erv.utils.exact :as exact.utils]))
 
 (defn maybe-round
   [n]
   #?(:clj (if (rational? n)
             n
             (round2 6 n))
-     :cljs (round2 6 n)))
+     :cljs (if (e/ratio? n)
+             n
+             (round2 6 n))))
 
 (defn maybe-rationalize
   [n decimals]
@@ -21,6 +25,18 @@
      ;; TODO implement
      :cljs (round2 6 n)))
 
+(defn- invert-interval
+  [period intvl]
+  (* (exact.utils/->exact period) (/ #?(:clj 1 :cljs e/ONE) intvl)))
+
+
+(comment
+  (def scale (map-indexed #(assoc %2 :index %1) (:scale (cps/make 2 [11 13 5 7]))))
+  (get-intervals 6 (take 2  scale))
+  (maybe-round (interval (:bounded-ratio (second (take 2 scale)))
+                         (:bounded-ratio (first (take 2 scale)))))
+  (invert-interval 2 (interval (:bounded-ratio (second (take 2 scale)))
+                               (:bounded-ratio (first (take 2 scale))))))
 (defn get-intervals
   [scale-size note-pair]
   (->> note-pair
@@ -28,7 +44,7 @@
           (let [period (:bounding-period a)
                 intvl (maybe-round (interval (:bounded-ratio a)
                                              (:bounded-ratio b)))
-                inversion (* period (/ 1 intvl))]
+                inversion (invert-interval period intvl)]
             {intvl {:steps #{(- (:index b) (:index a))}
                     :intervals [[a b]]}
              inversion {:steps #{(- scale-size (- (:index b) (:index a)))}
@@ -59,7 +75,7 @@
                                                (map
                                                 :bounded-ratio
                                                 pair)})))]))
-                           (sort-by first))
+                           (sort-by first <))
         non-cs-intervals (->> interval-data
                               (filter (fn [[_interval {:keys [steps]}]]
                                         (> (count steps) 1))))]
