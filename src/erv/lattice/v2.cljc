@@ -1,6 +1,9 @@
 (ns erv.lattice.v2
+  #?(:cljs (:refer-clojure :exclude [/ +]))
   (:require
    [erv.utils.core :refer [period-reduce]]
+   #?(:cljs [com.gfredericks.exact :as e :refer [/ +]])
+   [erv.utils.exact :as exact.utils]
    [erv.utils.ratios :refer [analyze-ratio]]))
 
 (def base-coords
@@ -61,8 +64,10 @@
 
 (defn custom-connection?
   [period point-data1 point-data2 custom-edges]
+  ;; (println (->> point-data1 :ratio) period)
   (let [r1 (->> point-data1 :ratio (period-reduce period))
         r2 (->> point-data2 :ratio (period-reduce period))]
+    ;; (println (->> point-data1 :ratio))
     (custom-edges
      (period-reduce period (/ r1 r2)))))
 
@@ -90,12 +95,15 @@
                        period
                        point-data1
                        point-data2)
+        ;; _ (println "PPPPPPPPPPDDDDDD")
         get-diff-count (comp #(apply + %) vals)
         num-diff  (diffs :numer-factors)
         denom-diff (diffs :denom-factors)
         diff (diff-count-set (+ (get-diff-count num-diff)
                                 (get-diff-count denom-diff)))
+        ;; _ (println "BBBBBBBCBBBBCCCCC?")
         custom? (custom-connection? period point-data1 point-data2 custom-edges)]
+    ;; (println "CCCCCCCCCCCCCCCC?")
     (if (or diff custom?)
       (let [points #{(:ratio point-data1)
                      (:ratio point-data2)}]
@@ -165,6 +173,7 @@
             max-distance (apply max distances-set)
             updated-edges (reduce
                            (fn [edges* node]
+                             ;; (println "MMMMMMMMMMMMMMMMC")
                              (make-connection distances-set
                                               edges*
                                               period
@@ -173,6 +182,7 @@
                                               custom-edges))
                            edges
                            ns)]
+        ;; (println updated-edges)
         (if
          (and (not (ref-ratio-in-ratio-edges? (:ratio ref-node) updated-edges))
               (<= max-distance (count combined-nodes)))
@@ -186,9 +196,11 @@
     & {:keys [custom-edges period]
        :or {custom-edges #{}
             period 2}}]
-   (let [coords-data-map (->> ratios
+   (let [period (exact.utils/->exact period)
+         coords-data-map (->> ratios
                               (map #(ratio->lattice-point % base-coords))
                               (into {}))
+         ;; _ (println coords-data-map)
          coords-data (vals coords-data-map)
          coords (->> coords-data
                      (map :coords))
@@ -196,6 +208,7 @@
          max-x (->> coords (map :x) (apply max))
          min-y (->> coords (map :y) (apply min))
          max-y (->> coords (map :y) (apply max))
+         ;; _ (println "+++++++++++")
          edges (->> coords-data-map
                     combine-nodes
                     (#(connect-nodes period % {:custom-edges custom-edges}))
@@ -210,6 +223,19 @@
       :max-y max-y
       :data coords-data
       :edges edges})))
+
+(comment
+  (ratios->lattice-data base-coords #_["1/1" "15/14" "5/4" "10/7" "3/2" "12/7"]
+                        (map exact.utils/parse-ratio ["1/1"
+                                                      "80/77"
+                                                      "12/11"
+                                                      "8/7"
+                                                      "96/77"
+                                                      "10/7"
+                                                      "16/11"
+                                                      "120/77"
+                                                      "12/7"
+                                                      "20/11"])))
 
 (defn swap-coords
   [coords coord-pairs]
