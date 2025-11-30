@@ -29,6 +29,8 @@
   [period intvl]
   (* (exact.utils/->exact period) (/ #?(:clj 1 :cljs e/ONE) intvl)))
 
+#_(:constant-structure? (analyze
+                         (:scale (edo/from-pattern [2 2 3 2 3]))))
 
 (comment
   (def scale (map-indexed #(assoc %2 :index %1) (:scale (cps/make 2 [11 13 5 7]))))
@@ -83,10 +85,12 @@
      :non-cs-intervals {:total (count non-cs-intervals)
                         :intervals non-cs-intervals}
      :constant-structure? (empty? non-cs-intervals)}))
-#_(:constant-structure? (analyze
-                         (:scale (edo/from-pattern [2 2 3 2 3]))))
+#_(sort-by first < [[2 2]
+                    [1 1]])
 #_(:constant-structure? (analyze
                          (:scale (edo/from-pattern [2 4 3 1 3]))))
+#_(analyze
+   (:scale (cps/make 2 [11 13 5 7])))
 #_(:constant-structure? (analyze
                          (:scale (cps/make 2 [11 13 5 7]))))
 

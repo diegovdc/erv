@@ -1,7 +1,6 @@
 (ns erv.meru.core
   (:require
    [clojure.math.combinatorics :as combo]
-   [erv.cps.core :refer [within-bounding-period]]
    [erv.meru.diagonals]
    [erv.meru.recurrent-series]
    [erv.mos.v3.core :refer [gen->mos-ratios]]
