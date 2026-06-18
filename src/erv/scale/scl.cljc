@@ -79,7 +79,9 @@
      :description description
      :footer footer}))
 
-(defn get-description-data [scale-data]
+(defn get-description-data
+  "Get description data from :meta {:scl/name :scl/description :scl/footer}"
+  [scale-data]
   (let [scale-type (-> scale-data :meta :scale)
         standard-description? (or  (:scl/name (:meta scale-data))
                                    (:scl/description (:meta scale-data)))]
@@ -131,7 +133,8 @@
   [filepath scale-data]
   #?(:clj
      (do (make-parents filepath)
-         (spit filepath (:content (make-scl-file scale-data))))
+         (spit filepath (:content (make-scl-file scale-data)))
+         (println "SCL file created:" filepath))
      :cljs (throw (js/Error. "Cannot spit file in JS, use make-scl-file instead"))))
 
 ;;;;;;;;;;;
@@ -140,7 +143,8 @@
 
 (def kbm-template
   "Template for a keyboard mapping"
-  "! KBM file for: %s; %s
+  "! %s
+! KBM file for: %s; %s
 ! Size of map. The pattern repeats every so many keys:
 %s
 ! First MIDI note number to retune:
@@ -166,7 +170,7 @@
 
 (defn make-kbm
   [{:as _kbm-template-config
-    :keys [scale-data degrees middle-note middle-note-freq comments?]
+    :keys [file-name scale-data degrees middle-note middle-note-freq comments?]
     :or {middle-note-freq (conv/midi->cps 60)
          middle-note 60
          comments? true}}]
@@ -178,6 +182,7 @@
                       sort
                       (str/join "\n"))]
     (cond-> (format kbm-template
+                    file-name
                     (:name scale-description "unknown.scl")
                     (:description scale-description "")
                     (count degrees)
@@ -249,5 +254,7 @@
   [{:keys [filepath] :as kbm-template-config}]
   #?(:clj
      (do (make-parents filepath)
-         (spit filepath (make-kbm kbm-template-config)))
+         (spit filepath (make-kbm (assoc kbm-template-config
+                                         :file-name (-> filepath (str/split #"/") last))))
+         (println "Creating kbm file at:" filepath))
      :cljs (throw (js/Error. "Cannot spit file in JS, use make-kbm instead"))))
