@@ -185,15 +185,17 @@
        (map #(period-reduce period %) ratios*)
        ratios*))))
 
-(normalize-ratios [1 3 4])
+#_(normalize-ratios [1 3 4])
 
 (defn ratios->harmonic-series
   [ratios]
-  (let [denominators (map (fn [r] (if (int? r) r (denominator r))) ratios)
+  (let [denominators (map (fn [r] (if (= r (int r)) ;; intish
+                                    r
+                                    (denominator r))) ratios)
         anti-denom (apply * denominators)
         harmonics (map #(* anti-denom %) ratios)
         gcd (gcd-of-list harmonics)]
-    (map #(/ % gcd) harmonics)))
+    (sort (map #(/ % gcd) harmonics))))
 
 (defn gen-chain
   "Create a chain of ratios starting from 1"
