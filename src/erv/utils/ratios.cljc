@@ -18,7 +18,7 @@
       [clojure.core :as core]
       [clojure.string :as str]
       [erv.utils.exact :as exact.utils]
-      [com.gfredericks.exact :as e :refer [> < + -  * / - mod min numerator denominator]]
+      [com.gfredericks.exact :as e :refer [> < + -  * / - mod min numerator denominator integer?]]
       [erv.utils.conversions :as conv]
       [erv.utils.core :refer [gcd-of-list interval period-reduce round2 prime-factors]]
       [erv.utils.impl :as impl :refer [format]])]))
@@ -189,7 +189,8 @@
 
 (defn ratios->harmonic-series
   [ratios]
-  (let [denominators (map (fn [r] (if (= r (int r)) ;; intish
+  (let [denominators (map (fn [r] (if #?(:clj (= r (int r))
+                                         :cljs (integer? r)) ;; intish
                                     r
                                     (denominator r))) ratios)
         anti-denom (apply * denominators)
