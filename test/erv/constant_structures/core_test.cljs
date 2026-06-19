@@ -1,7 +1,7 @@
 (ns erv.constant-structures.core-test
   (:require
    [clojure.test :refer [deftest is]]
-   [erv.constant-structures.core :refer [analyze]]
+   [erv.constant-structures.core :as subject]
    [erv.cps.core :as cps]
    [erv.utils.exact :as exact.utils]))
 
@@ -80,6 +80,7 @@
              {:steps #{5}, :intervals ({:steps -1, :interval ("143/128" "35/32")})}]),
            :non-cs-intervals {:total 0, :intervals ()},
            :constant-structure? true}
-         (->> (analyze
+         (->> (subject/analyze
                (:scale (cps/make 2 [11 13 5 7])))
               (exact.utils/make-readable)))))
+
