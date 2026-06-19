@@ -7,7 +7,7 @@
 (deftest ratios->lattice-data-test
   (is (= '{:period "2",
            :min-x 0,
-           :max-x 0,
+           :max-x 80,
            :min-y 0,
            :max-y 0,
            :data
@@ -16,21 +16,20 @@
              :denominator "2",
              :numer-factors ["3"],
              :denom-factors ["2"],
-             :coords {:x 0, :y 0}}
+             :coords {:x 40, :y 0}}
             {:ratio "9/8",
              :numerator "9",
              :denominator "8",
              :numer-factors ["3" "3"],
              :denom-factors ["2" "2" "2"],
-             :coords {:x 0, :y 0}}
+             :coords {:x 80, :y 0}}
             {:ratio "2",
              :numerator "2",
              :denominator "1",
              :numer-factors ["2"],
              :denom-factors [],
              :coords {:x 0, :y 0}}),
-           :edges (({:x 0, :y 0} {:x 0, :y 0})
-                   ({:x 0, :y 0} {:x 0, :y 0}))}
+           :edges (({:x 40, :y 0} {:x 0, :y 0}) ({:x 40, :y 0} {:x 80, :y 0}))}
 
          (->> "3/2 9/8 2/1"
               exact.utils/parse-ratios

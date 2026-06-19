@@ -23,12 +23,12 @@
                                {:x (clojure.core/+ x (get-in base-coords [factor :x]))
                                 :y (clojure.core/+ y (get-in base-coords [factor :y]))})
                              {:x 0 :y 0}
-                             numerator-factors)]
+                             (map exact.utils/->native numerator-factors))]
     (reduce (fn [{:keys [x y]} factor]
               {:x (- x (get-in base-coords [factor :x]))
                :y (- y (get-in base-coords [factor :y]))})
             numer-coords
-            denominator-factors)))
+            (map exact.utils/->native denominator-factors))))
 
 (defn ratio->lattice-point
   [ratio base-coords]
@@ -52,6 +52,7 @@
                                     (ratio-freqs2 factor 0)))))
             {}
             factors-set)))
+
 (comment
   (get-point-data-difference
    2
@@ -214,8 +215,6 @@
       :edges edges})))
 
 (comment
-  (exact.utils/make-readable (ratios->lattice-data base-coords
-                                                   (exact.utils/parse-ratios "3/2 9/8 2/1")))
   (ratios->lattice-data base-coords #_["1/1" "15/14" "5/4" "10/7" "3/2" "12/7"]
                         (map exact.utils/parse-ratio ["1/1"
                                                       "80/77"
