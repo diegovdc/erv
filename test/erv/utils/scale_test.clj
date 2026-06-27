@@ -107,7 +107,7 @@
              :bounding-period 2,
              :rotated-scale/original-degree 0,
              :rotated-scale/original-ratio 1}]
-           (rotate-scale 1 (ratios->scale [1 5/4 3/2])))))
+           (rotate-scale (ratios->scale [1 5/4 3/2]) 1))))
   ;; TODO
   #_(testing "Rotating twice is the same as rotating by the sum of the rotation steps"
       (is (= (rotate-scale 2 (ratios->scale [1 5/4 3/2]))
@@ -133,9 +133,9 @@
              :some-data "hola",
              :rotated-scale/original-degree 0,
              :rotated-scale/original-ratio 1}]
-           (rotate-scale 1
-                         (->> (ratios->scale [1 5/4 3/2])
-                              (map #(assoc % :some-data "hola"))))))))
+           (rotate-scale (->> (ratios->scale [1 5/4 3/2])
+                              (map #(assoc % :some-data "hola")))
+                         1)))))
 
 (deftest cross-set-test
   (is (= {:meta

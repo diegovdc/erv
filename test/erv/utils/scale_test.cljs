@@ -125,11 +125,11 @@
              :bounding-period "2",
              :rotated-scale/original-degree 0,
              :rotated-scale/original-ratio "1"}]
-           (->> "1 5/4 3/2"
-                exact.utils/parse-ratios
-                ratios->scale
-                (rotate-scale 1)
-                exact.utils/make-readable)))))
+           (-> "1 5/4 3/2"
+               exact.utils/parse-ratios
+               ratios->scale
+               (rotate-scale 1)
+               exact.utils/make-readable)))))
 
 (deftest cross-set-test
   (is (= {:meta

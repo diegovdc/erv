@@ -99,7 +99,7 @@
        :scale))
 
 (defn rotate-scale
-  [step scale]
+  [scale step]
   (let [scale* (map-indexed (fn [i n]
                               (cond-> (assoc n :rotated-scale/original-degree i)
                                 (:ratio n) (assoc :rotated-scale/original-ratio (:ratio n))))
@@ -131,7 +131,7 @@
 (defn find-subset-degrees
   [{:keys [scale subset-ratios max-missing-notes]
     :or {max-missing-notes 0}}]
-  (let [scale-rotations (map (fn [i] (rotate-scale i scale))
+  (let [scale-rotations (map (fn [i] (rotate-scale scale i))
                              (range (count scale)))
         subset-set (set subset-ratios)]
     (keep (fn [scale]
