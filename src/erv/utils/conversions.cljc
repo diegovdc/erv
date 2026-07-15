@@ -1,8 +1,11 @@
 (ns erv.utils.conversions
-  (:require [erv.utils.core :refer [round2]]))
+  (:require
+   [clojure.math :refer [log]]
+   [erv.utils.core :refer [round2]]
+   [erv.utils.exact :as exact.utils]))
 
 (defn ratio->cents [ratio]
-  (-> (Math/log ratio) (/ (Math/log 2)) (* 1200)))
+  (-> (log (exact.utils/->native ratio)) (/ (log 2)) (* 1200)))
 
 (defn cents->ratio [cents]
   (-> (/ cents 1200) (* (Math/log 2)) Math/exp))
@@ -38,10 +41,13 @@
   "If note is not exactly in 12ET it adds a suffix to the note with the upwards deviation in cents.
   i.e. 60.4 -> C3+40"
   [midi]
-  (let [deviation (-> (mod midi 1)
-                      (->> (round2 2))
-                      (* 100)
-                      int)
+  (let [deviation (->
+                   midi
+                   (exact.utils/->native)
+                   (mod  1)
+                   (->> (round2 2))
+                   (* 100)
+                   int)
         octave (get-octave midi)]
     (str (nth note-names (mod (int midi) 12))
          octave

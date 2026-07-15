@@ -1,9 +1,18 @@
 (ns erv.utils.scale
+  #?(:cljs (:refer-clojure :exclude [+ -  * / -  numerator denominator integer?
+                                     mod rem quot even? odd?]))
   (:require
+   #?(:cljs [com.gfredericks.exact :as e :refer [* + - - /]])
+   [clojure.core :as core]
    [clojure.math.combinatorics :as combo]
-   [erv.utils.core :refer [interval period-reduce rotate wrap-at]]
+   [erv.utils.core :refer [decompose-ratios interval lcm-of-list period-reduce
+                           rotate wrap-at]]
+   [erv.utils.exact :as exact.utils]
+   [erv.utils.impl :as impl]
    [erv.utils.ratios :refer [interval-seq->ratio-stack normalize-ratios
                              ratios->scale ratios-intervals]]))
+
+(def +degree #'impl/+degree)
 
 (defn degree-stack
   "Generate a stack ratios from a single (degree) generator"
@@ -14,7 +23,7 @@
              ratio-subset #{}
              offset offset
              gen-index 0]
-             (let [i (mod offset (count scale))
+             (let [i (core/mod offset (count scale))
                    new-note (assoc (nth scale i)
                                    :gen/index gen-index)
                    ratio (:bounded-ratio new-note)]
@@ -22,7 +31,7 @@
                  subset
                  (recur (conj subset new-note)
                         (conj ratio-subset ratio)
-                        (+ offset gen)
+                        (core/+ offset gen)
                         (inc gen-index)))))))
 
 (defn scale-intervals
@@ -43,7 +52,7 @@
 (defn tritriadic
   "Make a scale from stacking a triad three times.
   https://en.xen.wiki/w/Tritriadic_scale"
-  ([triad-ratios] (tritriadic 2 triad-ratios))
+  ([triad-ratios] (tritriadic (exact.utils/->exact 2) triad-ratios))
   ([period triad-ratios]
    (let [triad-ratios (normalize-ratios period triad-ratios)]
      {:meta {:scale :tritriadic
@@ -51,7 +60,8 @@
       :scale  (ratios->scale period
                              (map #(* (last triad-ratios) %)
                                   (interval-seq->ratio-stack
-                                   (ratios-intervals triad-ratios) 7)))})))
+                                   7
+                                   (ratios-intervals triad-ratios))))})))
 
 (defn scale->stacked-subscale
   "Make a scale from a stack of generator steps from a parent scale.
@@ -64,10 +74,11 @@
                    :offset offset}
                   degree-stack
                   scale-intervals
-                  (interval-seq->ratio-stack size)
-                  (->> (ratios->scale period))
+                  (->> (interval-seq->ratio-stack size)
+                       (ratios->scale period))
                   distinct)]
     {:meta {:scale :stacked-subscale
+            :period period
             :intervals (scale-intervals scale)
             :parent-scale scale
             :gen gen
@@ -88,7 +99,7 @@
        :scale))
 
 (defn rotate-scale
-  [step scale]
+  [scale step]
   (let [scale* (map-indexed (fn [i n]
                               (cond-> (assoc n :rotated-scale/original-degree i)
                                 (:ratio n) (assoc :rotated-scale/original-ratio (:ratio n))))
@@ -103,15 +114,16 @@
          rotation)))
 
 (defn cross-set
-  [period & ratios]
-  (let [scale (->> ratios
+  [period & ratio-vecs]
+  (let [scale (->> ratio-vecs
+                   #?(:cljs (map (partial map exact.utils/->exact)))
                    (apply combo/cartesian-product)
                    (map #(apply * %))
                    flatten
-                   (ratios->scale period)
+                   (ratios->scale (exact.utils/->exact period))
                    dedupe-scale)]
     {:meta {:scale :cross-set
-            :sets ratios
+            :sets ratio-vecs
             :size (count scale)
             :period period}
      :scale scale}))
@@ -119,7 +131,7 @@
 (defn find-subset-degrees
   [{:keys [scale subset-ratios max-missing-notes]
     :or {max-missing-notes 0}}]
-  (let [scale-rotations (map (fn [i] (rotate-scale i scale))
+  (let [scale-rotations (map (fn [i] (rotate-scale scale i))
                              (range (count scale)))
         subset-set (set subset-ratios)]
     (keep (fn [scale]
@@ -129,12 +141,12 @@
                                  scale)
                   total-subset (count subset-set)
                   total-subscale (count subscale)]
-              (when (<= (- total-subset total-subscale)
-                        max-missing-notes)
+              (when (core/<= (core/- total-subset total-subscale)
+                             max-missing-notes)
                 (let [degrees (map :rotated-scale/original-degree subscale)
                       matched-ratios (map :matched-ratio subscale)]
                   {:degrees degrees
-                   :matched (/ total-subscale total-subset)
+                   :matched (core// total-subscale total-subset)
                    :subscale/matched-ratios matched-ratios}))))
           scale-rotations)))
 
@@ -143,10 +155,62 @@
   (keep #(wrap-at % scale) degrees))
 
 (defn scale-steps->degrees
-  "Convert a sequence of scale-steps defining a scale (e.g. [2 2 1 2 2 2 1] into a sequence of degrees"
+  "Convert a sequence of scale-steps defining a scale (e.g. [2 2 1 2 2 2 1]) into a sequence of degrees"
   ([scale-steps] (scale-steps->degrees scale-steps true))
   ([scale-steps remove-octave?]
    (->> scale-steps
-        (reduce (fn [acc n] (conj acc (+ n (or (last acc) 0))))
+        (reduce (fn [acc n] (conj acc (core/+ n (or (last acc) 0))))
                 [0])
         (drop-last (if remove-octave? 1 0)))))
+
+(defn diamond
+  [period factors]
+  (let [factors (map exact.utils/->exact factors)
+        scale (->> (combo/cartesian-product factors factors)
+                   (mapv (fn [[a b]] (/ a b)))
+                   (ratios->scale period)
+                   dedupe-scale)]
+    {:meta {:scale :diamond
+            :factors factors
+            :size (count scale)
+            :period period}
+     :scale scale}))
+
+;; TODO add tests
+;;
+;;
+;;
+;;
+;;
+(defn proportional-difference
+  "Returns the difference between the ratios if the chord is proportional, otherwiser returns `nil`"
+  [ratios]
+  (let [ratio-analysis (decompose-ratios ratios)
+        lcm (lcm-of-list (mapv :denom ratio-analysis))]
+    (->> ratio-analysis
+         (mapv (fn [{:keys [denom numer]}]
+                 (* numer (/ lcm denom))))
+         sort
+         (partition 2 1)
+         (mapv (fn [[a b]] (- b a)))
+         (#(when (apply = %) (first %))))))
+
+(defn proportional-chords
+  "Returns a map with keys `:by-notes` and `:by-degrees` with the notes or degrees that form proportional chords of a given size.
+  The map groups these notes or degrees by the difference in beats common to them."
+  [chord-size scale]
+  (let [scale (+degree scale)
+        proportional-chords-by-notes (->> (combo/combinations scale chord-size)
+                                          (keep (fn [ns]
+                                                  (when-let [diff (->> ns (mapv :ratio) proportional-difference)]
+                                                    [diff ns]))))]
+    {:by-notes (reduce
+                (fn [acc [diff ns]]
+                  (update acc diff (fnil conj []) (mapv :ratio ns)))
+                {}
+                proportional-chords-by-notes)
+     :by-degrees (reduce
+                  (fn [acc [diff ns]]
+                    (update acc diff (fnil conj []) (mapv :degree ns)))
+                  {}
+                  proportional-chords-by-notes)}))

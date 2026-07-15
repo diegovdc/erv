@@ -1,7 +1,8 @@
 (ns erv.utils.core-test
   (:require
    [clojure.test :refer [deftest is]]
-   [erv.utils.core :refer [pattern->degrees pick-degrees pick-pattern]]))
+   [erv.utils.core :refer [make-map-by-key pattern->degrees pick-degrees
+                           pick-pattern]]))
 
 (deftest pattern->indexes-test
   (is (= [0 2 4 5 7 9 11]
@@ -20,3 +21,7 @@
          (pick-degrees
           (range 5)
           (range 10)))))
+
+(deftest make-map-by-key-test
+  (is (= {1 {:id 1}, 2 {:id 2}}
+         (make-map-by-key :id [{:id 1} {:id 2}]))))

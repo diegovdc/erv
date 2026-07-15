@@ -1,19 +1,27 @@
 (ns erv.utils.ratios
+  ;; TODO: improve namespace definition
   #?@
    (:clj
     [(:require
+      [clojure.core :as core]
       [clojure.edn :as edn]
       [clojure.string :as str]
       [com.gfredericks.exact :as e]
       [erv.utils.conversions :as conv]
       [erv.utils.core :refer [gcd-of-list interval period-reduce prime-factors
-                              round2]])]
+                              round2]]
+      [erv.utils.exact :as exact.utils])]
     :cljs
-    [(:require
+    [(:refer-clojure :exclude [> < + -  * / -  numerator denominator integer?
+                               mod rem quot even? odd? min])
+     (:require
+      [clojure.core :as core]
       [clojure.string :as str]
-      [com.gfredericks.exact :as e]
+      [erv.utils.exact :as exact.utils]
+      [com.gfredericks.exact :as e :refer [> < + -  * / - mod min numerator denominator integer?]]
       [erv.utils.conversions :as conv]
-      [erv.utils.core :refer [interval period-reduce round2 prime-factors]])]))
+      [erv.utils.core :refer [gcd-of-list interval period-reduce round2 prime-factors]]
+      [erv.utils.impl :as impl :refer [format]])]))
 
 (defn ratio-proximity-list
   "Make a list of `ratios` that approximate a `target-ratio` in a list of `target-ratios`"
@@ -75,53 +83,46 @@
 
 (defn ratio-string->ratio
   [ratio-string]
-  (let [[numer denom] (-> ratio-string
-                          (str/split #"/"))]
+  (let [[numer denom] (-> ratio-string (str/split #"/"))]
     #?(:clj (/ (edn/read-string numer)
                (edn/read-string denom))
        :cljs (e// (e/string->integer numer) (e/string->integer denom)))))
 
-(do
-  #?(:clj (defn analyze-ratio
+;; TODO: simplify definition
+#?(:clj (defn analyze-ratio
+          [ratio]
+          (let [numerator* (if (integer? ratio)
+                             ;; in case it's big int,or something like 1N
+                             (int ratio)
+                             (numerator ratio))
+                denominator*  (if (integer? ratio)
+                                1
+                                (denominator ratio))]
+            {:numerator numerator*
+             :denominator denominator*
+             :numer-factors (prime-factors numerator*)
+             :denom-factors (prime-factors denominator*)}))
+   :cljs  (defn analyze-ratio
             [ratio]
-            (let [numerator* (if (integer? ratio)
-                               ;; in case it's big int,or something like 1N
-                               (int ratio)
-                               (numerator ratio))
-                  denominator*  (if (integer? ratio)
-                                  1
-                                  (denominator ratio))]
+            (let [numerator*  (if-not (e/ratio? ratio) ;when receiving something like 1/1 the above cond will not return a ratio type
+                                ratio
+                                (e/numerator ratio))
+                  denominator* (if-not (e/ratio? ratio)
+                                 e/ONE
+                                 (e/denominator ratio))]
+
               {:numerator numerator*
                :denominator denominator*
                :numer-factors (prime-factors numerator*)
-               :denom-factors (prime-factors denominator*)}))
-     :cljs  (defn analyze-ratio
-              [ratio]
-              (let [ratio* (cond
-                             #?(:clj (ratio? ratio) :cljs false) ratio
-                             (float? ratio) (float->ratio ratio)
-                             (and (string? ratio) (str/includes? ratio "/")) (ratio-string->ratio ratio)
-                             (and (string? ratio) (seq ratio)) (e/string->integer ratio)
-                             :else (throw (ex-info (str "Don't know how to convert ratio, received " ratio) {:ratio ratio})))
-                    numerator*  (if-not (e/ratio? ratio*) ;when receiving something like 1/1 the above cond will not return a ratio type
-                                  (e/integer->native ratio*)
-                                  (e/integer->native (e/numerator ratio*)))
-                    denominator* (if-not (e/ratio? ratio*)
-                                   1
-                                   (e/integer->native (e/denominator ratio*)))]
-                {:numerator numerator*
-                 :denominator denominator*
-                 :numer-factors (prime-factors numerator*)
-                 :denom-factors (prime-factors denominator*)}))))
+               :denom-factors (prime-factors denominator*)})))
 
 (defn ratio->factor-string
   [ratio]
   (->> ratio
        analyze-ratio
-       ((juxt (comp #(str/join "." (if (seq %) % [1])) :numer-factors)
-              (comp #(str/join "." (if (seq %) % [1])) :denom-factors)))
-       #?(:clj (apply format "%s/%s")
-          :cljs ((fn [n d] (str n "/" d))))))
+       ((juxt (comp #(str/join "." (if (seq %) (map exact.utils/->native %) [1])) :numer-factors)
+              (comp #(str/join "." (if (seq %) (map exact.utils/->native %) [1])) :denom-factors)))
+       (apply format "%s/%s")))
 
 (defn seq-interval-analysis
   [ratios]
@@ -137,12 +138,22 @@
   ([ratios] (ratios->scale 2 ratios))
   ([period ratios]
    (->> ratios
-        (map (fn [r]
-               (let [ratio (period-reduce period r)]
-                 {:ratio ratio
-                  :bounded-ratio ratio
-                  :bounding-period period})))
-        (sort-by :bounded-ratio))))
+        (mapv (fn [r]
+                (let [ratio (period-reduce period r)]
+                  {:ratio ratio
+                   :bounded-ratio ratio
+                   :bounding-period (exact.utils/->exact period)})))
+        (sort-by :bounded-ratio)
+        ;; impl/+degree ;; TODO: should this be used here?
+        )))
+
+(defn ratios->scale-data
+  ([ratios] (ratios->scale-data 2 ratios))
+  ([period ratios]
+   (let [scale (ratios->scale period ratios)]
+     {:meta {:period period
+             :size (count scale)}
+      :scale scale})))
 
 (defn ratios-intervals
   "Get the intervals between the ratios in the sequence.
@@ -153,39 +164,42 @@
        (map #(apply interval %))))
 
 (defn interval-seq->ratio-stack
-  [interval-seq size]
-  (loop [ratios [1]
+  [size interval-seq]
+  (loop [ratios [(exact.utils/->exact 1)]
          index 0]
     (if (= size (count ratios))
       ratios
       (recur (conj ratios (* (last ratios)
-                             (nth interval-seq (mod index (count interval-seq)))))
+                             (nth interval-seq (core/mod index (count interval-seq)))))
              (inc index)))))
 
 (defn normalize-ratios
   "Will return a vector of ratios sorted and normalized so that the smallest one is 1/1."
-  ([ratios] (normalize-ratios nil ratios)
-            (let [min* (apply min ratios)]
-              (->> ratios sort (map #(/ % min*)))))
+  ([ratios] (normalize-ratios nil ratios))
   ([period ratios]
-   (let [min* (apply min ratios)
+   (let [period (when period (exact.utils/->exact period))
+         ratios (mapv exact.utils/->exact ratios)
+         min* (apply min ratios)
          ratios* (->> ratios sort (map #(/ % min*)))]
      (if period
        (map #(period-reduce period %) ratios*)
        ratios*))))
 
+#_(normalize-ratios [1 3 4])
+
 (defn ratios->harmonic-series
   [ratios]
-  #?(:clj
-     (let [denominators (map (fn [r] (if (int? r) r (denominator r))) ratios)
-           anti-denom (apply * denominators)
-           harmonics (map #(* anti-denom %) ratios)
-           gcd (gcd-of-list harmonics)]
-       (map #(/ % gcd) harmonics))
-     :cljs (throw (js/Error (str "ratios->harmonic-series not implemented, cannot process:" ratios)))))
+  (let [denominators (map (fn [r] (if #?(:clj (= r (int r))
+                                         :cljs (integer? r)) ;; intish
+                                    r
+                                    (denominator r))) ratios)
+        anti-denom (apply * denominators)
+        harmonics (map #(* anti-denom %) ratios)
+        gcd (gcd-of-list harmonics)]
+    (sort (map #(/ % gcd) harmonics))))
 
 (defn gen-chain
   "Create a chain of ratios starting from 1"
   [length generator]
   (->> (range length)
-       (map (fn [i] (apply * (repeat i generator))))))
+       (map (fn [i] (apply core/* (repeat i generator))))))

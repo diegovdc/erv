@@ -16,7 +16,6 @@
        (cps/bound-ratio 2)
        (cps/maps->data :bounded-ratio)))
 
-
 (deftest cps-scale-fulfills-the-scale-spec
   (is (true? (s/valid? :erv.scale.core/scale (hexany :scale)))))
 
@@ -68,7 +67,6 @@
       (let [i->d4 (stateful-interval->degree)]
         (= [1 3 6 10]
            (mapv i->d4 [1 2 3 4]))))))
-
 
 (deftest demo-scale*-test
   (testing "single period, default base-freq @ 440hz"

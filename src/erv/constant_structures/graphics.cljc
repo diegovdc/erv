@@ -83,7 +83,6 @@
           (q/arc 0 0 (+ i* (- radius 100))
                  (+ i* (- radius 100)) start end))))))         ;; Draw a circle at x y with the correct diameter
 
-
 (defn make-state
   [scale added-notes]
   (let [scale+added-notes* (scale+added-notes scale added-notes)

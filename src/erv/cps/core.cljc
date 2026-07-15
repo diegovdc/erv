@@ -1,14 +1,23 @@
 (ns erv.cps.core
   ;;  TODO use https://github.com/Engelberg/ubergraph for the graphs
+  #?(:cljs (:refer-clojure :exclude [> < >= <= = + - * / numerator denominator integer?
+                                     mod rem quot even? odd?]))
+  #_(:require
+     #?(:cljs [com.gfredericks.exact :as e :refer [* + - - /]])
+     [clojure.string])
   (:require
+   #? (:cljs [goog.string :as gstr])
+   #? (:cljs [goog.string.format])
+   #?(:cljs [com.gfredericks.exact :as e :refer [> < >= <= = + - * /]])
+   #?(:cljs [erv.utils.exact :as exact.utils])
+   [clojure.core :as core]
    [clojure.math.combinatorics :as combo]
    [clojure.set :as set]
    [clojure.spec.alpha :as s]
    [clojure.string :as str]
    [clojure.walk :as walk]
-   [erv.utils.core :refer [interval validate]]
-   #? (:cljs [goog.string :as gstr])
-   #? (:cljs [goog.string.format])))
+   [erv.utils.core :refer [validate period-reduce]]
+   [erv.utils.scale :refer [+degree]]))
 
 #?(:cljs
    (def format gstr/format))
@@ -24,14 +33,14 @@
     :graph :some-graph}})
 
 (s/def ::cps (s/and (s/coll-of set? :distinct true)
-                    #(->> % (map count) (apply =))))
+                    #(->> % (map count) (apply core/=))))
 (s/def ::sub-cps-set (s/coll-of ::cps :distinct true))
 
 (defn- num->kw [n]
-  (-> (char (+ 65 n)) str str/lower-case keyword))
+  (-> (char (core/+ 65 n)) str str/lower-case keyword))
 
 (defn ->cps [size factors]
-  (if (> size (count factors))
+  (if (core/> size (count factors))
     #{#{}}
     (with-meta
       (->> (combo/combinations (into [] factors) size)
@@ -60,20 +69,7 @@
     (map (fn [pair] {:set pair
                      :archi-set (set (map archi-factors pair))}) cps-set)))
 
-(defn within-bounding-period
-  "Transposes a ratio withing a bounding-period.
-  The octave is a `bounding-period` of 2,the tritave of 3, etc."
-  [bounding-period ratio]
-  {:pre [(> bounding-period 1)]}
-  (loop [r ratio]
-    (cond
-      (> r bounding-period) (recur (/ r bounding-period))
-      (< r 1) (recur (* r bounding-period))
-      (= bounding-period r) 1
-      :else r)))
-
-#_(within-bounding-period 2 1/21)
-
+;; TODO: can this be replaced with the function at utils?
 (defn bound-ratio
 ;;; TODO, how to be able to specify multiple bounding-periods
   "Calculate all the ratios within the bounding-period (e.g. octave, tritave, etc.)
@@ -82,20 +78,22 @@
   i.e. for a cps with factors [1 3 5 7] you can use either 3, 5, or 7"
   ([bounding-period cps-map] (bound-ratio bounding-period 1 cps-map))
   ([bounding-period normalization-generator cps-map]
-   (->> cps-map
-        (map (fn [node*]
-               (let [ratio (/ (apply * (node* :set)) normalization-generator)]
-                 (if bounding-period;; TODO test `nil` `bounding-period` with sub-cps
-                   (assoc node*
-                          :ratio ratio
-                          :bounded-ratio (within-bounding-period
-                                          bounding-period
-                                          ratio)
-                          :bounding-period bounding-period)
-                   (assoc node*
-                          :ratio ratio
-                          :bounded-ratio ratio
-                          :bounding-period nil))))))))
+   (let [norm-gen #?(:clj normalization-generator
+                     :cljs (exact.utils/parse-ratio (str normalization-generator)))]
+     (->> cps-map
+          (map (fn [node*]
+                 (let [set* #?(:clj (node* :set)
+                               :cljs (map e/native->integer (node* :set)))
+                       ratio (/ (apply * set*) norm-gen)]
+                   (if bounding-period ;; TODO test `nil` `bounding-period` with sub-cps
+                     (assoc node*
+                            :ratio ratio
+                            :bounded-ratio (period-reduce bounding-period ratio)
+                            :bounding-period bounding-period)
+                     (assoc node*
+                            :ratio ratio
+                            :bounded-ratio ratio
+                            :bounding-period nil)))))))))
 
 (defn add-edge
   ;;  TODO use https://github.com/Engelberg/ubergraph for the graphs
@@ -114,8 +112,8 @@
       (let [rest* (rest nodes)
             current-node (first nodes)
             edges (->> rest*
-                       (filter #(= (dec (count (:set %))) (count (set/intersection (:set current-node)
-                                                                                   (:set %)))))
+                       (filter #(core/= (dec (count (:set %))) (count (set/intersection (:set current-node)
+                                                                                        (:set %)))))
                        (map #(conj [] current-node %)))]
         (recur rest*
                (reduce
@@ -164,7 +162,7 @@
 (defn find-subcps
   [cps-set-size factors sub-cps-set-size subcps-factors-size]
   (let [base-cps (->cps subcps-factors-size factors)
-        diff-set-size (Math/abs (- cps-set-size sub-cps-set-size))
+        diff-set-size (Math/abs (core/- cps-set-size sub-cps-set-size))
         gens-set (set factors)
         meta* {::type (str sub-cps-set-size ")" subcps-factors-size " of " cps-set-size ")" (count factors))}]
     (->> base-cps (map
@@ -333,7 +331,8 @@
        set->maps
        (bound-ratio period norm-fac)
        (maps->data :bounded-ratio)
-       (+meta size factors norm-fac)))
+       (+meta size factors norm-fac)
+       (#(update % :scale +degree))))
 
 (defn +subcps [cps-data set-size factors-size]
   (let [{:keys [cps/size cps/factors period cps/normalized-by]} (:meta cps-data)]
@@ -350,8 +349,9 @@
   [cps-size cps-row]
   (->> (range 1 cps-row)
        (map (fn [row]
-              [row (range (max 1 (+ cps-size (- row cps-row)))
+              [row (range (max 1 (core/+ cps-size (core/- row cps-row)))
                           (inc (min row cps-size)))]))))
+
 (defn +all-subcps-row [cps-data [row cps-sizes]]
   (reduce (fn [cps-data* set-size]
             (+subcps cps-data* set-size row))
