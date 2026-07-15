@@ -7,6 +7,7 @@
    [erv.utils.ratios :refer [analyze-ratio]]))
 
 (def base-coords
+  "By Kraig Grady"
   {1 {:x 0 :y 0}
    2 {:x 0 :y 0}
    3 {:x 40 :y 0}
@@ -20,8 +21,14 @@
 
 (defn make-coords [base-coords numerator-factors denominator-factors]
   (let [numer-coords (reduce (fn [{:keys [x y]} factor]
-                               {:x (clojure.core/+ x (get-in base-coords [factor :x]))
-                                :y (clojure.core/+ y (get-in base-coords [factor :y]))})
+                               (when-not (get base-coords factor)
+                                 (throw (ex-info "Missing ratio in base-coords"
+                                                 {:factor factor
+                                                  :base-coords base-coords})))
+                               (let [x* (get-in base-coords [factor :x])
+                                     y* (get-in base-coords [factor :y])]
+                                 {:x (clojure.core/+ x x*)
+                                  :y (clojure.core/+ y y*)}))
                              {:x 0 :y 0}
                              (map exact.utils/->native numerator-factors))]
     (reduce (fn [{:keys [x y]} factor]
@@ -243,3 +250,39 @@
                         [1 3/2 9/8 2/1 3/1])
   (ratios->lattice-data base-coords '("1/1" "15/14" "5/4" "10/7" "3/2" "12/7"))
   :rcf)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; * Coordinate generator
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(def golden-ratio (/ (+ 1 (Math/sqrt 5)) 2))
+
+(defn frac [x] (- x (Math/floor x)))
+
+(defn coordinate-for-generator
+  "gen-idx: 0‑based index in the generator list (excluding the period).
+   Returns {:x x :y y} with y ≤ 0 for all generators (except the first hardcoded)."
+  [gen-idx step]
+  (cond
+    (= gen-idx 0) {:x step :y 0}        ; first generator → +x axis
+    (= gen-idx 1) {:x 0 :y (- step)}    ; second generator → –y axis
+    :else
+    (let [i        (- gen-idx 1)               ; i=1 for gen-idx=2 (prime 7)
+          phase    (- (* 0.25 golden-ratio) 1) ; shift so i=1 gives angle –45°
+          angle    (- (* Math/PI (frac (/ (+ i phase) golden-ratio))))
+          radius   (* step (/ gen-idx (+ gen-idx 2)))] ; grows smoothly to step
+      {:x (* radius (Math/cos angle))
+       :y (* radius (Math/sin angle))})))            ; always negative for gen-idx≥2
+
+(defn gen-coords
+  "subgroup: vector of primes (e.g. [2 3 5 7])
+   period   : the prime that acts as the period (must be in subgroup)
+   step     : visual scaling factor"
+  [period step subgroup]
+  (let [generators (remove #{period} subgroup)
+        gen-coords (map-indexed (fn [idx p] [p (coordinate-for-generator idx step)])
+                                generators)]
+    (into {}
+          (concat [[1 {:x 0 :y 0}]
+                   [period {:x 0 :y 0}]]
+                  gen-coords))))

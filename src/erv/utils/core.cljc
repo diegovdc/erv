@@ -185,6 +185,7 @@
         (ratio? ratio) {:numer (numerator ratio) :denom (denominator ratio)}))))
 (comment
   (decompose-ratio 21/16))
+
 (defn decompose-ratios
   ([ratios] (mapv decompose-ratio ratios)))
 
@@ -193,6 +194,17 @@
   (-> n decompose-ratio
       (update :numer prime-factors)
       (update :denom prime-factors)))
+
+(defn analyze-ratios
+  ([ratios]
+   (let [factorization (mapv (fn [r] [r (factorize-ratio r)]) ratios)
+         subgroup (->> factorization
+                       (map (comp vals second))
+                       flatten
+                       set
+                       sort)]
+     {:subgroup subgroup
+      :factorization factorization})))
 (do
   (defn factors->hiccup
     "Outputs hiccup with factors in power notation"
