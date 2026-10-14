@@ -6,7 +6,8 @@
       [clojure.string :as str]
       [erv.cps.core :as cps]
       [erv.utils.conversions :refer [cps->name* ratio->cents]]
-      [erv.utils.core :refer [interval wrap-at]]
+      [erv.utils.core :refer [interval round2 wrap-at]]
+      [erv.utils.scale :refer [rotate-scale]]
       [table.core :as t]
       [taoensso.timbre :as timbre])]
     :cljs
@@ -14,7 +15,8 @@
       [clojure.spec.alpha :as s]
       [clojure.string :as str]
       [erv.utils.conversions :refer [cps->name* ratio->cents]]
-      [erv.utils.core :refer [interval wrap-at]]
+      [erv.utils.core :refer [interval round2 wrap-at]]
+      [erv.utils.scale :refer [rotate-scale]]
       [taoensso.timbre :as timbre])]))
 
 (s/def ::bounded-ratio number?)         ;; Used to be `ratio?` but changed to `number?` to support `edos`
@@ -142,25 +144,94 @@
 
 (do
   (defn print-scale-intervals!
-    [scale
-     & {:keys [unit ratio-type]
-        :or {unit :cents ;; #{:cents :ratios}
-             ratio-type :bounded-ratio ;; #{:bounded-ratio :ratio}
-             }}]
-    (let [conversor (case unit
-                      :ratios identity
-                      (comp int ratio->cents))
-          data (let [ratios (->> scale (map ratio-type))]
-                 (map (fn [a b] (concat [a] b))
-                      (concat ["ratio"] ratios)
-                      (concat [(map #(str "  " % "  ") ratios)]
-                              (map (fn [r]
-                                     (map (fn [r2]  (conversor (interval r r2))) ratios))
-                                   ratios))))]
-      #?(:clj (t/table data)
-         :cljs (js/console.table data))
-      data)))
+    ([scale] (print-scale-intervals! {} scale))
+    ([{:keys [unit ratio-type table-opts]
+       :or {unit :cents                ;; #{:cents :ratios}
+            ratio-type :bounded-ratio  ;; #{:bounded-ratio :ratio}
+            }}
+      scale]
+     (let [conversor (case unit
+                       :ratios identity
+                       (comp int ratio->cents))
+           data (let [ratios (->> scale (map ratio-type))]
+                  (map (fn [a b] (concat [a] b))
+                       (concat ["ratio"] ratios)
+                       (concat [(map #(str "  " % "  ") ratios)]
+                               (map (fn [r]
+                                      (map (fn [r2]  (conversor (interval r r2))) ratios))
+                                    ratios))))]
+       #?(:clj (t/table data table-opts)
+          :cljs (js/console.table data))
+       data))))
+
+(defn- style-variety-footer
+  [table]
+  (let [rows (str/split table #"\n")
+        footer-pred #(str/includes? % "Variety")
+        footer (concat [(first rows)]
+                       (drop-while (comp not footer-pred) rows))]
+    (str/join "\n" (concat (take-while (comp not footer-pred) rows)
+                           footer))))
+
+(defn print-modal-intervalic-table!
+  ([scale] (print-modal-intervalic-table! {} scale))
+  ([{:keys [unit ratio-type table-opts]
+     :or {unit :cents               ;; #{:cents :ratios}
+          ratio-type :bounded-ratio ;; #{:bounded-ratio :ratio}
+          }}
+    scale]
+   (let [period (-> scale first :bounding-period)
+         scale-len (count scale)
+         ;; scale (concat scale [{ratio-type period}])
+         unit-fn (if-not (= :cents unit) identity (comp #(round2 2 %) ratio->cents))
+         modes (map (fn [mode-i] (->> (rotate-scale mode-i scale)
+                                      (map ratio-type)))
+                    (range scale-len))
+         interval->deg (reduce (fn [acc mode]
+                                 (reduce (fn [acc [deg intvl]] (update acc intvl (fnil conj #{}) deg))
+                                         acc
+                                         (map-indexed vector mode)))
+                               {}
+
+                               modes)
+         deg->interval (reduce (fn [acc mode]
+                                 (reduce (fn [acc [deg intvl]] (update acc deg (fnil conj #{}) intvl))
+                                         acc
+                                         (map-indexed vector mode)))
+                               {}
+
+                               modes)
+         variety (->> deg->interval
+                      (map (fn [[deg intvls]] [deg (count intvls)]))
+                      (sort-by first)
+                      (map second)
+                      ;; 1 is for the period
+                      (#(concat ["Variety"] % [1])))
+         modes* (->> modes
+                     (map-indexed (fn [i mode]
+                                    (->> mode
+                                         (map (fn [intvl]
+                                                (let [in-multiple-degs? (> (count (interval->deg intvl))
+                                                                           1)
+                                                      intvl* (unit-fn intvl)]
+                                                  ;; if interval is in multiple steps add a *
+                                                  (if in-multiple-degs? (str intvl* "*") (str intvl*)))))
+                                         (into [i])
+                                         (#(conj % (unit-fn period)))))))
+         ;; inc to add period
+         header [(concat ["Mode"] (range scale-len) [(str "(" scale-len ")")])]
+         rows (concat header modes* [variety])]
+     #?(:clj (let [table-str (with-out-str (t/table rows
+                                                    table-opts))
+                   table-str* (style-variety-footer table-str)]
+               (println table-str*))
+        :cljs (js/console.table rows)))))
 
 (comment
   (require '[erv.cps.core :as cps])
-  (print-scale-intervals! (:scale (cps/make 2 [1 3 5 7]))))
+  (print-scale-intervals! {:table-opts {:style :org}}
+                          (:scale (cps/make 2 [1 3 5 7])))
+
+  (print-modal-intervalic-table! {:unit :ratio
+                                  :table-opts {:style :org}}
+                                 (:scale (cps/make 2 [1 3 5 7]))))
