@@ -8,8 +8,6 @@
             [erv.utils.core :as utils]
             [clojure.string :as str]))
 
-
-
 (defn twelvulate [scale]
   (map #(-> % (/ 100) float (Math/round) (* 100)) scale))
 
@@ -41,7 +39,6 @@
                       546.8153805314276
                       813.6862861351651
                       933.1290943962624))
-
 
 (defn +cents [cps]
   (assoc cps :cents (->> cps
@@ -83,10 +80,9 @@
                     %1 %2)))))
 
 (+euclidean-distance {:cents '(0 204 316 519 702 1018)})
-(sort (map #(-> % (- 182) (mod 1200)) '(0 182 386 498 701 884) ))
+(sort (map #(-> % (- 182) (mod 1200)) '(0 182 386 498 701 884)))
 (defn +gens [factors cps]
   (assoc cps :factors factors))
-
 
 (comment
   (require '[clojure.math.combinatorics :as combo]
@@ -122,9 +118,9 @@
   (with-open [writer (io/writer "3oo7-similarity-to-12edo-scales-up-to-23.csv")]
     (csv/write-csv writer
                    (->> #_cps-sorted-by-euclidean-distance
-                        #_cps-sorted-by-euclidean-distance-up-to-53
-                        cps-sorted-by-euclidean-distance-up-to-23
-                        (mapv (juxt :factors :mode :cents :closest-12-edo :euclidean-distance ))
+                    #_cps-sorted-by-euclidean-distance-up-to-53
+                    cps-sorted-by-euclidean-distance-up-to-23
+                        (mapv (juxt :factors :mode :cents :closest-12-edo :euclidean-distance))
                         (mapv (fn [data]
                                 (mapv #(cond
                                          (= java.lang.Long (type %)) %

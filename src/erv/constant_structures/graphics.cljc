@@ -4,7 +4,7 @@
    [erv.cps.core :as cps]
    [erv.edo.core :as edo]
    [erv.utils.conversions :as convo]
-   [quil.core :as q]))
+   [quil.core :as q :include-macros true]))
 
 (defn setup []
   #_(q/pixel-density 2)
@@ -21,21 +21,26 @@
 (defn scale+added-notes
   "`scale` is a scale, added notes is a vector of numbers"
   [scale added-notes]
-  (->> scale
-       (group-by :bounded-ratio)
-       (map #(-> % second first))
-       (concat (map
-                #(assoc {:color additional-note-color}
-                        :bounded-ratio %)
-                added-notes))
-       (sort-by :bounded-ratio)))
+  (let [bounding-period (-> scale first :bounding-period)]
+    (->> scale
+         (group-by :bounded-ratio)
+         (map #(-> % second first))
+         (concat (map
+                  #(assoc {:color additional-note-color}
+                          :bounded-ratio %
+                          :bounding-period bounding-period)
+                  added-notes))
+         (sort-by :bounded-ratio))))
 
 (defn make-arcs [analysis]
   (->> analysis
+       :non-cs-intervals
        :intervals
        (mapcat (fn [[_ {:keys [intervals]}]]
+                 (println "ARCS" _ (count intervals))
                  (map
                   (fn [{:keys [steps interval]}]
+
                     {:start (ratio->radians (first interval))
                      :end (ratio->radians (second interval))
                      :steps steps})
@@ -83,13 +88,12 @@
           (q/arc 0 0 (+ i* (- radius 100))
                  (+ i* (- radius 100)) start end))))))         ;; Draw a circle at x y with the correct diameter
 
-
 (defn make-state
   [scale added-notes]
   (let [scale+added-notes* (scale+added-notes scale added-notes)
-        state (let [analysis (-> (analyze scale+added-notes*)
-                                 :non-cs-intervals)]
+        state (let [analysis (analyze scale+added-notes*)]
                 {:scale scale
+                 :analysis analysis
                  :added-notes added-notes
                  :scale+added-notes scale+added-notes*
                  :arcs (make-arcs analysis)

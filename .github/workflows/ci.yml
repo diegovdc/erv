@@ -7,7 +7,7 @@ on:
     branches: [ main, dev ]
 
 jobs:
-  test:
+  clojure-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -35,5 +35,28 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gitlibs-
 
-      - name: Run tests
+      - name: Run Clojure tests
         run: clojure -M:test
+
+  node-test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [lts/*]  # LTS plus specific versions
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'  # Enable dependency caching
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm tests
+        run: CI=false npm test

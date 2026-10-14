@@ -20,6 +20,7 @@ src/archive/huygens-fokker-scala-archive/*.scl
 **/.DS_Store
 /node_modules
 /dist
+/out
 .cider-repl-history
 .shadow-cljs/
 npm-test/
