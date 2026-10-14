@@ -255,7 +255,7 @@
 ;; * Coordinate generator
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def golden-ratio (/ (+ 1 (Math/sqrt 5)) 2))
+(def golden-ratio (clojure.core// (clojure.core/+ 1 (Math/sqrt 5)) 2))
 
 (defn frac [x] (- x (Math/floor x)))
 
@@ -279,7 +279,7 @@
    period   : the prime that acts as the period (must be in subgroup)
    step     : visual scaling factor"
   [period step subgroup]
-  (let [generators (remove #{period} subgroup)
+  (let [generators (remove #{period} (map #?(:clj bigint :cljs js/BigInt) subgroup))
         gen-coords (map-indexed (fn [idx p] [p (coordinate-for-generator idx step)])
                                 generators)]
     (into {}
