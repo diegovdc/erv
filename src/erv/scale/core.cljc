@@ -183,7 +183,7 @@
    (let [period (-> scale first :bounding-period)
          scale-len (count scale)
          ;; scale (concat scale [{ratio-type period}])
-         unit-fn (if-not (= :cents unit) identity (comp #(round2 2 %) ratio->cents))
+         unit-fn (if-not (= :cents unit) identity (comp #(round2 1 %) ratio->cents))
          modes (map (fn [mode-i] (->> (rotate-scale mode-i scale)
                                       (map ratio-type)))
                     (range scale-len))
