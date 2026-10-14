@@ -81,6 +81,7 @@
            :non-cs-intervals {:total 0, :intervals ()},
            :constant-structure? true}
          (->> (subject/analyze
-               (:scale (cps/make 2 [11 13 5 7])))
+               (map #(select-keys % [:bounded-ratio :bounding-period])
+                    (:scale (cps/make 2 [11 13 5 7]))))
               (exact.utils/make-readable)))))
 

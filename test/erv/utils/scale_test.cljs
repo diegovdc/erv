@@ -128,7 +128,7 @@
            (-> "1 5/4 3/2"
                exact.utils/parse-ratios
                ratios->scale
-               (rotate-scale 1)
+               (->> (rotate-scale 1))
                exact.utils/make-readable)))))
 
 (deftest cross-set-test
