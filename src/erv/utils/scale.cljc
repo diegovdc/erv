@@ -163,6 +163,8 @@
                 [0])
         (drop-last (if remove-octave? 1 0)))))
 
+(def steps->degrees #'scale-steps->degrees)
+
 (defn diamond
   [period factors]
   (let [factors (map exact.utils/->exact factors)
