@@ -52,8 +52,7 @@
                {})))
 
 (comment
-  (make-degree->note (erv.cps.core/make 2 [1 3 5 7]))
-  )
+  (make-degree->note (erv.cps.core/make 2 [1 3 5 7])))
 
 (defn make-set->degrees-map
   [{:keys [scale] :as _cps}]
@@ -67,7 +66,6 @@
        (map-indexed (fn [i {:keys [set]}] [i set]))
        (reduce (fn [m [deg set]] (update m deg (fnil conj #{}) set))
                {})))
-
 
 (defn- set-d1-intersection?
   [set1 set2]
@@ -86,14 +84,13 @@
            (map #(set (conj % degree-set)))
            (filter #(->> (combo/combinations % 2)
                          (map (partial apply set-d1-intersection?))
-                         (every? true?)) )
+                         (every? true?)))
            set)))
 
   (comment
     (harmonic-sets (erv.cps.core/make 3 [1 3 5 7 9 11])
                    4
                    0)))
-
 
 (defn harmonic-set-degrees
   "Returns a list of harmonic sets (as degrees) for a specific degree of a cps
@@ -104,16 +101,16 @@
     (sort (map (comp #(into [] %)
                      sort
                      (partial map set->degrees))
-               sets))))=
+               sets)))) =
 
 (comment
   (=
-    [#{#{#{7 5} #{3 5} #{7 3}}
-       #{#{7 5} #{3 5} #{1 5}}
-       #{#{7 1} #{7 5} #{7 3}}
-       #{#{7 1} #{7 5} #{1 5}}}
+   [#{#{#{7 5} #{3 5} #{7 3}}
+      #{#{7 5} #{3 5} #{1 5}}
+      #{#{7 1} #{7 5} #{7 3}}
+      #{#{7 1} #{7 5} #{1 5}}}
     '((0 1 4) (0 1 5) (0 2 4) (0 2 5))]
-    (let [cps (erv.cps.core/make 2 [1 3 5 7])
-          set-size 3]
-      [(harmonic-sets cps set-size 0)
-       (harmonic-set-degrees cps set-size 0)])))
+   (let [cps (erv.cps.core/make 2 [1 3 5 7])
+         set-size 3]
+     [(harmonic-sets cps set-size 0)
+      (harmonic-set-degrees cps set-size 0)])))

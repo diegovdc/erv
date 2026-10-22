@@ -53,12 +53,19 @@
 (defn parse-scale [scl]
   (-> scl (str/split #"\n")
       (->>
-       (remove #(= \! (first %)))       ; remove comment lines
+       (remove #(or (= \! (first %))
+                    (= \; (first %))
+                    (str/blank? %)))       ; remove comment and empty lines
        (drop 1)                         ; drop description
        ;;  get all numbers
-       (map #(-> % str/trim (str/split #" ") first read-string))
+       (map #(-> % str/trim (str/split #"[ !]") first read-string))
        (filter number?)
        (drop 1))))                    ; drop scale size
+
+(comment
+  (parse-scale (slurp "/Users/diego/Music/tunings/SD-53_v.2_scala_files/5_Ambient tunings/lyamsy-octophone.scl"))
+  (parse-file
+   (slurp "/Users/diego/Music/tunings/tieminos-archive/diffracted_meta-slendro/diffracted-meta-slendro_no1.scl")))
 
 (defn- get-ratio [num]
   (if (or (int? num) (ratio? num))
@@ -78,17 +85,13 @@
 (comment (parse-scale test-scale))
 
 (defn parse-file [scl]
-  (try
-    (let [scale (get-scale scl)]
-      {:meta {:scale :scala-archive
-              :source source
-              :size (count scale)
-              :filename (get-title scl)
-              :description (get-description scl)}
-       :scale scale})
-    (catch Exception e (println "could not read "
-                                (-> scl (str/split #"\n")
-                                    (->> (take 4)))))))
+  (let [scale (get-scale scl)]
+    {:meta {:scale :scala-archive
+            :source source
+            :size (count scale)
+            :filename (get-title scl)
+            :description (get-description scl)}
+     :scale scale}))
 ;;;;;;;;;;;
 ;;; Write
 ;;;;;;;;;;;

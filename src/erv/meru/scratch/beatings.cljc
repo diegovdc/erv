@@ -12,13 +12,13 @@
   [root ratios]
   (->> ratios
        (mapcat
-         (fn [degree ratio]
-           (map (fn [i] {:degree degree
-                         :ratio ratio
-                         :partial i
-                         :partial-ratio (* i ratio)})
-                (range 1 9)))
-         (range))
+        (fn [degree ratio]
+          (map (fn [i] {:degree degree
+                        :ratio ratio
+                        :partial i
+                        :partial-ratio (* i ratio)})
+               (range 1 9)))
+        (range))
        #_sort
        (#(combo/combinations % 2))
        (remove (fn [[x1 x2]] (= (:ratio x1) (:ratio x2))))
@@ -86,7 +86,7 @@
                   7/4
                   57/32
                   465/256]))
-  
+
 (->> metameantone-beatings
      #_(map :diff-c4)
      #_(remove zero?)
@@ -100,9 +100,7 @@
      #_(dedupe)
      #_(map #(/ % (* 1/16 1/64))))
 
-
 (->> metaslendro-beatings
      #_(map (juxt :diff :diff-c4))
      #_(dedupe)
-     (filter #(->> % :pair (map :ratio) set ((fn [%] (% 1)))))
-     )
+     (filter #(->> % :pair (map :ratio) set ((fn [%] (% 1))))))

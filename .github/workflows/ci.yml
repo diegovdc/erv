@@ -7,12 +7,19 @@ on:
     branches: [ main, dev ]
 
 jobs:
-  test:
+  clojure-test:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      # --- new: force Java 21 for the Clojure side too ---
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
 
       - name: Set up Clojure CLI
         uses: DeLaGuardo/setup-clojure@10.1
@@ -35,5 +42,35 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gitlibs-
 
-      - name: Run tests
+      - name: Run Clojure tests
         run: clojure -M:test
+
+  node-test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [lts/*]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # --- new: Java 21 is required by shadow-cljs/closure-compiler ---
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm tests
+        run: CI=false npm test

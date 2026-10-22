@@ -2,8 +2,6 @@
   (:require [clojure.set :as set]
             [erv.utils.core :as utils]))
 
-
-
 (defn get-next-nodes [graph cycle]
   (->> (graph (-> cycle :seq first))
        (reduce
@@ -33,12 +31,10 @@
                    :status :open})))
         ())))
 
-
 (defn update-finder-state [previous-state new-interation-result]
   (let [{:keys [open closed]} (group-by :status new-interation-result)]
     {:open open
      :closed (into (:closed previous-state) closed)}))
-
 
 (defn init-state [graph]
   {:open (mapv (fn [node]
@@ -73,9 +69,8 @@
                   (if (-> acc :set (contains? cycle*))
                     acc
                     {:set (apply conj (:set acc) (utils/get-all-rotations cycle*))
-                     :cycles (conj (:cycles acc) cycle*)}
-                    ))
-                )
+                     :cycles (conj (:cycles acc) cycle*)})))
+
               {:set #{} :cycles []}
               cycles)))))
 (comment
@@ -152,6 +147,4 @@
      {:seq (#{7 5} #{1 3} #{7 1}), :set #{#{7 1} #{7 5} #{1 3}}, :status :open}
      {:seq (#{7 3} #{1 3} #{7 1}), :set #{#{7 1} #{7 3} #{1 3}}, :status :open}
      {:seq (#{1 5} #{1 3} #{7 1}), :set #{#{7 1} #{1 5} #{1 3}}, :status :open}
-     {:seq (#{1 3} #{7 1}), :set #{#{7 1} #{1 3}}, :status :closed}))
-
-  )
+     {:seq (#{1 3} #{7 1}), :set #{#{7 1} #{1 3}}, :status :closed})))
