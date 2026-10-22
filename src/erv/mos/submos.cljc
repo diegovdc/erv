@@ -1,7 +1,8 @@
 (ns erv.mos.submos
   (:require [clojure.set :as set]
             [erv.mos.mos :as mos]
-            [erv.utils.core :refer [get-all-rotations rotate]]))
+            [erv.utils.core :refer [get-all-rotations rotate]]
+            [erv.utils.scale :refer [scale-steps->degrees]]))
 
 (defn group [mos pattern]
   (loop [groups []
@@ -100,22 +101,29 @@
      :at-zero? (zero? near-zero)}))
 
 (defn make-submos-for-pattern [mos pattern]
-  (->> mos
-       get-all-rotations
-       (map-indexed
-        (fn [index mos*]
-          (let [submos (groups->submos (group mos* pattern))
-                mos-degrees (into [] (submos-as-mos-degrees index mos pattern))]
-            {:mos submos
-             :degree index
-             ;; represent secondary mos as degrees of primary mos
-             :mos-degrees mos-degrees
-             :rotation (rotate-near-zero submos mos-degrees)})))))
+  (let [mos-size (apply + mos)
+        scale-chromatic-degrees (scale-steps->degrees mos)]
+    (->> mos
+         get-all-rotations
+         (map-indexed
+          (fn [index mos*]
+            (let [submos (groups->submos (group mos* pattern))
+                  mos-degrees (into [] (submos-as-mos-degrees index mos pattern))]
+              {:mos submos
+               :degree index
+               ;; represent secondary mos as degrees of primary mos
+               :mos-degrees mos-degrees
+               ;; degrees relative to "chromatic" scale
+               :chromatic-degrees (->> (scale-steps->degrees submos)
+                                       (mapv #(mod (+ (nth scale-chromatic-degrees index) %) mos-size)))
+               ;; rotation data relative to chromatic-scale
+               :rotation (rotate-near-zero submos mos-degrees)}))))))
 
 (comment
-  (make-submos-for-pattern [3 2 3 2 2] [2 3]))
+  (make-submos-for-pattern [3 2 3 2 2] [2 3])
+  (make-submos-for-pattern [2 2 1 2 2 2 1] [2 1 1 2 1 1]))
 
-(defn true-submos? [period generator submos]
+(defn- true-submos? [period generator submos]
   (let [submos-set (set submos)
         mos (mos/make-mos period generator)
         size (count (first submos-set))

@@ -34,6 +34,11 @@
 
 (get-mos-points 12 5)
 
+(defn mos?
+  [intervals]
+  (and (<= (count (set intervals)) 2)
+       (->> intervals frequencies vals (map exact.utils/->exact) (apply coprime?))))
+
 (defn mos-points->mos
   [mos-points]
   (->> (drop-last 1 mos-points)
@@ -44,8 +49,8 @@
             (cond
               (= #{1 2} (set intervals)) ;; NOTE Do we really not want any more MOS?
               (reduced {:moses (conj moses points) :waiting []})
-              (and (<= (count (set intervals)) 2)
-                   (->> intervals frequencies vals (map exact.utils/->exact) (apply coprime?)))
+
+              (mos? intervals)
               {:moses (conj moses points) :waiting []}
               :else
               {:moses moses :waiting (conj waiting point)})))
