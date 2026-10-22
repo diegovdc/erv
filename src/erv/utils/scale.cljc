@@ -165,6 +165,16 @@
 
 (def steps->degrees #'scale-steps->degrees)
 
+(defn degrees->steps
+  [scale-size degrees]
+  (let [intervals-minus-rest
+        (->> degrees
+             sort
+             (partition 2 1)
+             (mapv (fn [[a b]] (- b a))))
+        rest* (- scale-size (apply + intervals-minus-rest))]
+    (conj intervals-minus-rest rest*)))
+
 (defn diamond
   [period factors]
   (let [factors (map exact.utils/->exact factors)
