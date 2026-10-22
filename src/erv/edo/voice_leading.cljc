@@ -7,7 +7,8 @@
    [erv.edo.chords :refer [chords-in-pattern]]
    [erv.mos.submos :as submos]
    [erv.utils.core :refer [get-all-rotations pattern->degrees]]
-   [erv.utils.scale :refer [degrees->steps scale-steps->degrees]]))
+   [erv.utils.scale :refer [degrees->steps scale-steps->degrees]]
+   [taoensso.timbre :as timbre]))
 
 (defn find-closest-chord
   ([edo chord] (find-closest-chord edo chord chord))
@@ -46,7 +47,6 @@
 
 (defn- get-closest-chords
   [{:keys [scale-size chord-shape-degs max-movement]} last-chord]
-  (println "PC" chord-shape-degs)
   (mapcat #(->> %
                 (find-closest-chord scale-size last-chord)
                 (take-while (fn [{:keys [total-movement]}]
@@ -159,84 +159,83 @@
      :chord->degree (submos-chord->degree mos submos)
      :initial-chord-degs initial-chord-degs}))
 
-(do
-  (defn chord-progression
-    [{:keys [scale-steps
-             chords-steps
-             chord->degree
-             max-len
-             max-movement
-             initial-chord-degs
-             limit]
-      :or   {limit 10000}}]
-    (let [chans            (map (fn [_] (a/chan)) (range max-len))
-          ;; stop-chan        (a/chan)
-          scale-size       (apply + scale-steps)
-          scale-degrees*   (set (scale-steps->degrees scale-steps))
-          chord->degree*   (or chord->degree
-                               (default-chord->degree scale-steps chords-steps))
-          _                (println chord->degree*)
-          chord-shape-degs (map #(scale-steps->degrees %) chords-steps)
-          progressions     (atom [])
-          progressions-p   #?(:clj (promise) :cljs progressions)
-          pending-count    (atom 0)
-          save-progression (fn [chord-seq] (swap! progressions conj chord-seq))
-          make-loop        (fn [i chan]
-                             (a/go-loop []
-                               (let [chord-seq (a/<! chan)]
-                                 (if (nil? chord-seq)
-                                   (if-let [chan (nth chans (inc i) nil)]
-                                     (do (a/close! chan)
-                                         (println "closing" (inc i)))
-                                     #?(:clj (deliver progressions-p @progressions)
-                                        :cljs nil))
-                                   (let [_                                (swap! pending-count dec)
-                                         {:keys [next-chords chord-seqs]} (get-chord-seqs
-                                                                           {:scale-size       scale-size
-                                                                            :max-movement     max-movement
-                                                                            :chord-shape-degs chord-shape-degs
-                                                                            :scale-degrees    scale-degrees*
-                                                                            :chord->degree    chord->degree*}
-                                                                           chord-seq)]
-                                     (cond
-                                       (> (count @progressions) limit) (println "stopping")
-                                       (nil? (seq next-chords))        (save-progression chord-seq)
+(defn chord-progression
+  [{:keys [scale-steps
+           chords-steps
+           chord->degree
+           max-len
+           max-movement
+           initial-chord-degs
+           limit]
+    :or   {limit 10000}}]
+  (let [chans            (map (fn [_] (a/chan)) (range max-len))
+        ;; stop-chan        (a/chan)
+        scale-size       (apply + scale-steps)
+        scale-degrees*   (set (scale-steps->degrees scale-steps))
+        chord->degree*   (or chord->degree
+                             (default-chord->degree scale-steps chords-steps))
+        ;; _                (println chord->degree*)
+        chord-shape-degs (map #(scale-steps->degrees %) chords-steps)
+        progressions     (atom [])
+        progressions-p   #?(:clj (promise) :cljs progressions)
+        deliver-progressions (fn [] #?(:clj (deliver progressions-p @progressions)
+                                       :cljs nil))
+        pending-count    (atom 0)
+        save-progression (fn [chord-seq] (swap! progressions conj chord-seq))
+        make-loop        (fn [i chan]
+                           (a/go-loop []
+                             (let [chord-seq (a/<! chan)]
+                               (if (nil? chord-seq)
+                                 (if-let [chan (nth chans (inc i) nil)]
+                                   (do (a/close! chan)
+                                       (timbre/debug "closing" (inc i)))
+                                   (deliver-progressions))
+                                 (let [_                                (swap! pending-count dec)
+                                       {:keys [next-chords chord-seqs]} (get-chord-seqs
+                                                                         {:scale-size       scale-size
+                                                                          :max-movement     max-movement
+                                                                          :chord-shape-degs chord-shape-degs
+                                                                          :scale-degrees    scale-degrees*
+                                                                          :chord->degree    chord->degree*}
+                                                                         chord-seq)]
+                                   (cond
+                                     (> (count @progressions) limit) (do (deliver-progressions)
+                                                                         (timbre/warn "Progressions limit exceeded"))
+                                     (nil? (seq next-chords))        (save-progression chord-seq)
 
-                                       (>= (count (first chord-seqs)) max-len) (doseq [chord-seq* chord-seqs]
-                                                                                 (save-progression chord-seq*))
+                                     ;; (>= (count (first chord-seqs)) max-len) (doseq [chord-seq* chord-seqs]
+                                     ;;                                           (save-progression chord-seq*))
 
-                                       :else (doseq [chords chord-seqs]
-                                               (let [repetition-type (chord-repeats? chords)]
-                                                 (case repetition-type
-                                                   :bad-repeat nil ;; throw away the progression
-                                                   :cycle      (save-progression chords)
-                                                   :no-repeat  (do
-                                                                 (a/>! (nth chans (dec (count chords))) chords)
-                                                                 (swap! pending-count inc))))))
-                                     (recur))))))]
-      (doseq [[i chan] (map-indexed vector chans)]
-        (make-loop i chan))
-      (a/>!! (nth chans 0)
-             [{:chord  initial-chord-degs
-               :degree (->> initial-chord-degs
-                            (map #(mod % scale-size))
-                            set
-                            chord->degree*)}])
-      (a/close! (nth chans 0))
-      (swap! pending-count inc)
-      {:atom/progressions    progressions
-       :promise/progressions progressions-p
-       :pending-count        pending-count}))
-
-  (do (def ps (chord-progression {:scale-size         12
-                                  :scale-steps        [2 2 1 2 2 2 1]
-                                  :chords-steps       #{[4 3 5] [3 4 5]}
-                                  :chord->degree      (default-chord->degree [2 2 1 2 2 2 1]
-                                                                             #{[4 3 5] [3 4 5]})
-                                  :max-len            2
-                                  :max-movement       7
-                                  :initial-chord-degs [0 4 7]}))
-      @(:promise/progressions ps)))
+                                     :else (let [chords->repeat?  (reduce (fn [m chords]
+                                                                            (assoc m chords (chord-repeats? chords)))
+                                                                          {}
+                                                                          chord-seqs)
+                                                 repetition-types (set (vals chords->repeat?))]
+                                             ;; keep the previous chord-seq as some branches may not continue now
+                                             (when (:bad-repeat repetition-types)
+                                               (save-progression chord-seq))
+                                             (doseq [[chords repetition-type] chords->repeat?]
+                                               (case repetition-type
+                                                 :bad-repeat nil ;; throw away the progression
+                                                 :cycle      (save-progression chords)
+                                                 :no-repeat  (if (>= (count chords) max-len)
+                                                               (save-progression chords)
+                                                               (do (a/>! (nth chans (dec (count chords))) chords)
+                                                                   (swap! pending-count inc)))))))
+                                   (recur))))))]
+    (doseq [[i chan] (map-indexed vector chans)]
+      (make-loop i chan))
+    (a/>!! (nth chans 0)
+           [{:chord  initial-chord-degs
+             :degree (->> initial-chord-degs
+                          (map #(mod % scale-size))
+                          set
+                          chord->degree*)}])
+    (a/close! (nth chans 0))
+    (swap! pending-count inc)
+    {:atom/progressions    progressions
+     :promise/progressions progressions-p
+     :pending-count        pending-count}))
 
 (defn min-note-diff-filter
   "Filters a list of chord progressions and returns chord progressions where
@@ -252,45 +251,24 @@
                            true
                            pairs))))))
 
-(comment
-  (->> cc
-       (map :target-chord))
-  (do (def ps (chord-progression {:scale-size 12
-                                  :scale-steps [2 2 1 2 2 2 1]
-                                  :chords-steps #{[4 3 5] [3 4 5]}
-                                  :max-len 2
-                                  :max-movement 7
-                                  :initial-chord-degs [0 4 7]}))
-      @(:prog-promise ps))
+(comment ;; simple example
+  (do
+    (def ps (chord-progression {:scale-size 12
+                                :scale-steps [2 2 1 2 2 2 1]
+                                :chords-steps #{[4 3 5] [3 4 5]}
+                                :max-len 2
+                                :max-movement 7
+                                :initial-chord-degs [0 4 7]}))
+    @(:promise/progressions ps))
 
-  (-> ps :progressions deref count)
-  (->> user/progresion-1 :progressions deref
-       (group-by (fn [prog]
-                   (map :degree prog)))
-       (filter (fn [[k v]]
-
-                 (> (count v) 1)))
-       (map (fn [[k vs]]
-              [k (->> vs (map #(->> %
-                                    (map :chord))))])))
   (-> ps :pending-count deref)
 
   (->> ps
-       :progressions
-       deref
-       (sort-by (juxt count (fn [chs] (->> chs
-                                           (map #(:mvt % 0))
-                                           (apply +)
-                                           abs))))
-       (map #(map :chord %))
-       set
-       count
-       #_(filter #(and ((set %) 7)
-                       ((set %) 5)))))
-(comment
+       :atom/progressions
+       deref))
+
+(comment ;; more complex example
   (require '[clojure.string :as str])
-  (->> cc
-       (map :target-chord))
   (def ps (chord-progression (merge {:max-len 8
                                      :max-movement 3}
                                     (submos-chord-progression-config 0 [2 1 1 1 2 1 1 1 1] [2 2 2 3]))))
@@ -298,12 +276,10 @@
   (-> ps :atom/progressions deref count)
   (-> ps :pending-count deref)
 
-  (->> ps
-       :atom/progressions
-       deref
-       shuffle
-       #_(take 10)
+  ;; printable progressions
+  (->> ps :atom/progressions deref shuffle (take 10)
        (map (fn [prog] (mapv (comp #(str/join "-" %) :chord) prog))))
+  ;; spit them to file
   (->> ps
        :atom/progressions
        deref
