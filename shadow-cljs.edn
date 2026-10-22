@@ -17,4 +17,7 @@
         :exports-fn js.export-fn/generate-exports}
   :browser-test {:target :browser-test
                  :devtools {:ignore-warnings true}
-                 :test-dir "out/test"}}}
+                 :test-dir "out/test"}
+  :node-test {:target :node-test
+              :output-to "out/node-tests.js"
+              :autorun true}}}
