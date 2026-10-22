@@ -1,5 +1,6 @@
 (ns erv.mos.submos
   (:require [clojure.set :as set]
+            [clojure.string :as str]
             [erv.mos.mos :as mos]
             [erv.utils.core :refer [get-all-rotations rotate]]
             [erv.utils.scale :refer [scale-steps->degrees]]))
@@ -20,12 +21,12 @@
 (defn groups->submos [groups]
   (mapv #(apply + %) groups))
 
-(defn included? [mos-set rotations]
+(defn- included? [mos-set rotations]
   (reduce #(if (mos-set %2) (reduced true) %1)
           false
           rotations))
 
-(defn deduplicate [mos-set new-moses]
+(defn- deduplicate [mos-set new-moses]
   (reduce (fn [{:keys [mos-set already-in] :as acc} mos]
             (let [rots (get-all-rotations mos)]
               (if (included? already-in rots)
@@ -35,7 +36,7 @@
           {:mos-set mos-set :already-in mos-set}
           new-moses))
 
-(defn submos-list-by-mos
+(defn- submos-list-by-mos
   "Groups the submos-list by mos (independently of the rotation)
   `submos-list`example:
   ```
@@ -80,20 +81,13 @@
                          :mos-degrees [4 1]
                          :rotation {:mos [7 5], :degree 1, :at-zero? false}})))
 
-(def mos-freqs (fn [mos] (-> mos frequencies vals set)))
-
-(defn all-mos-freqs [mos generator]
-  (->> (mos/make-mos (apply + mos) generator)
-       (map (comp set vals frequencies))
-       set))
-
-(defn submos-as-mos-degrees [degree mos pattern]
+(defn- submos-as-mos-degrees [degree mos pattern]
   (let [len (count mos)]
     (->> pattern
          (reduce #(conj %1 (mod (+ %2 (last %1)) len)) [degree])
          (drop-last 1))))
 
-(defn rotate-near-zero [submos mos-degrees]
+(defn- rotate-near-zero [submos mos-degrees]
   (let [near-zero (apply min mos-degrees)
         rotation-amount (.indexOf mos-degrees near-zero)]
     {:mos (into [] (rotate submos rotation-amount))
@@ -123,7 +117,7 @@
   (make-submos-for-pattern [3 2 3 2 2] [2 3])
   (make-submos-for-pattern [2 2 1 2 2 2 1] [2 1 1 2 1 1]))
 
-(defn- true-submos? [period generator submos]
+(defn- ^:deprecated true-submos? [period generator submos]
   (let [submos-set (set submos)
         mos (mos/make-mos period generator)
         size (count (first submos-set))
@@ -137,23 +131,25 @@
                                   {:mos [4 5 3], :degree 3}
                                   {:mos [5 5 2], :degree 4}))))
 
-(defn make-submos-for-generator [mos mos-generator pattern-generator]
+(defn- make-submos-for-generator [mos mos-generator pattern-generator]
   (let [patterns (mos/make-mos (count mos) pattern-generator)
         period (count mos)]
     (->> patterns
          (remove #(or (= 1 (count %)) (= #{1} (set %))))
          (map (fn [pattern]
-                (let [submos (make-submos-for-pattern mos pattern)]
+                (let [submos (make-submos-for-pattern mos pattern)
+                      secondary-mos? (true-submos? (apply + mos) mos-generator
+                                                   (map :mos submos))]
                   {:pattern pattern
                    :period period
                    :generator pattern-generator
-                   :true-submos? (true-submos? (apply + mos) mos-generator
-                                               (map :mos submos))
+                   :true-submos? secondary-mos?
+                   :type (if secondary-mos? :secondary :traverse)
                    :submos submos
                    :submos-by-mos (submos-list-by-mos submos)})))
          (into []))))
 
-(defn filter-mos-members [mos-set submos]
+(defn- filter-mos-members [mos-set submos]
   (let [exclusions (into #{} (mapcat get-all-rotations mos-set))]
     (remove exclusions submos)))
 
@@ -164,6 +160,17 @@
    ;;   mirrors the first.
    (let [generators (range 1 (Math/ceil (/ (count mos) 2)))]
      (mapcat #(make-submos-for-generator mos mos-generator %) generators))))
+
+(defn print-submos-list
+  [mos-generator mos]
+  (let [submos-by-type (->> (make-all-submos mos mos-generator)
+                            (group-by :type))]
+    (->> [:secondary :traverse]
+         (mapv (fn [type]
+                 (str (str/upper-case (name type)) ":\n"
+                      (str/join "\n" (mapv :pattern (submos-by-type type))))))
+         (str/join "\n")
+         (println))))
 
 (comment
 ;;; NOTE three approaches
