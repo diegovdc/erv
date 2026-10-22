@@ -1,10 +1,7 @@
 (ns erv.mos.v2.submos
   (:require
-   [clojure.string :as str]
    [erv.mos.mos :as mos]
-   [erv.mos.submos :refer [deduplicate make-submos-for-pattern]]))
-
-;; from 5)31
+   [erv.mos.submos :as submos :refer  [make-submos-for-pattern]]))
 
 (defn take-until [target mos]
   (reduce (fn [acc x] (if (= target (apply + acc))
@@ -12,7 +9,7 @@
                         (conj acc x)))
           []
           mos))
-#_(take-until 5 [4 1 4 1 4 1 4 1 4 1 4 1 1])
+
 (defn get-submos-pattern [mos sub]
   (loop [sub sub
          mos mos
@@ -23,28 +20,6 @@
         (recur (rest sub)
                (drop submos-val mos)
                (conj submos submos-val))))))
-
-(defn get-generator-from-pattern
-  "Try to figure out the generator of a mos-row assuming a two interval mos pattern that is somewhat ordered"
-  [pattern]
-  (let [intervals (set pattern)
-        initial-interval (first pattern)]
-    (reduce
-     (fn [acc interval]
-       (let [interval-set (set (:subpatter acc))]
-
-         (cond
-           (and (:second-interval-seen? acc)
-                (= initial-interval interval))
-           (reduced (apply + (:subpattern acc)))
-           (not= initial-interval interval)
-           (-> acc
-               (update :subpattern conj interval)
-               (update :second-interval-seen? (constantly true)))
-           :else
-           (update acc :subpattern conj interval))))
-     {:subpattern []
-      :second-interval-seen? false} pattern)))
 
 (defn get-all-subs [generator mos-row]
   (let [mos (mos/make-mos (apply + mos-row) generator)]
