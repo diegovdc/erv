@@ -1,0 +1,148 @@
+#+STARTUP: show2levels
+
+* TODO Submos inconsistency in data
+** Description
+Seems like the data structure is not quite precise.
+#+begin_src clojure
+(require
+  '[erv.mos.submos :as submos]
+  '[erv.mos.v3.core :as mos.v3]
+  '[erv.utils.core :refer [rotate]]
+  '[erv.utils.scale :refer [get-degrees rotate-scale scale-intervals scale-steps->degrees]])
+
+(def pentatonics
+    (->> (submos/make-all-submos [2 2 2 1 2 2 1]  5)
+         (filter :true-submos?)
+         (filter #(= 5 (count (:pattern %))))
+         first
+         :submos))
+
+#+end_src
+
+#+RESULTS:
+: #'erv.mos.tanabe/pentatonics
+
+#+begin_src clojure :wrap example
+(-> pentatonics)
+#+end_src
+
+#+RESULTS:
+#+begin_example
+({:mos [4 2 3 2 1], :degree 0, :mos-degrees [0 2 3 5 6], :chromatic-degrees [0 4 6 9 11], :rotation {:mos [4 2 3 2 1], :degree 0, :at-zero? true}} {:mos [4 1 4 1 2], :degree 1, :mos-degrees [1 3 4 6 0], :chromatic-degrees [2 6 7 11 0], :rotation {:mos [2 4 1 4 1], :degree 0, :at-zero? true}} {:mos [3 2 3 2 2], :degree 2, :mos-degrees [2 4 5 0 1], :chromatic-degrees [4 7 9 0 2], :rotation {:mos [2 2 3 2 3], :degree 0, :at-zero? true}} {:mos [3 2 3 2 2], :degree 3, :mos-degrees [3 5 6 1 2], :chromatic-degrees [6 9 11 2 4], :rotation {:mos [2 2 3 2 3], :degree 1, :at-zero? false}} {:mos [4 1 4 2 1], :degree 4, :mos-degrees [4 6 0 2 3], :chromatic-degrees [7 11 0 4 6], :rotation {:mos [4 2 1 4 1], :degree 0, :at-zero? true}} {:mos [3 2 4 1 2], :degree 5, :mos-degrees [5 0 1 3 4], :chromatic-degrees [9 0 2 6 7], :rotation {:mos [2 4 1 2 3], :degree 0, :at-zero? true}} {:mos [3 2 3 2 2], :degree 6, :mos-degrees [6 1 2 4 5], :chromatic-degrees [11 2 4 7 9], :rotation {:mos [2 3 2 2 3], :degree 1, :at-zero? false}})
+#+end_example
+
+** DONE The =:chromatic-degrees= cover the whole chromatic scale, for example: :bug:
+CLOSED: [2026-10-21 Wed 13:30]
+   #+begin_src clojure
+(->> pentatonics
+     (mapcat :chromatic-degrees)
+     set
+     sort)
+   #+end_src
+
+   #+RESULTS:
+   : (0 1 3 5 7 8 10)
+
+Should it? or should it cover only the diatonic degrees?
+
+** TODO The ordering of the =:mos= or =:mos-degrees= as well as the =:degree= also doesn't seem right :bug:maybe:
+*** Argument
+To produce the tanabe cycle pentatonics (page 13 of =mos.pdf=) some sorting needed to be done.
+#+begin_src clojure
+(def pyth-diat (-> (mos.v3/gen->mos-ratios 4/3 2)
+                (nth 3)
+                :scale
+                (->> (rotate-scale -6))))
+
+(mapv
+  (fn [{:keys [rotation mos-degrees]}]
+    (->> mos-degrees
+         (get-degrees pyth-diat)
+         (sort-by :bounded-ratio)
+         (rotate-scale (* -1 (:degree rotation)))
+         scale-intervals))
+  (->> pentatonics
+       (map #(update % :mos-degrees sort))
+       (sort-by (juxt #(nth (:mos-degrees %) 0)
+                      #(nth (:mos-degrees %) 1)
+                      #(nth (:mos-degrees %) 2)
+                      #(nth (:mos-degrees %) 3)
+                      #(nth (:mos-degrees %) 4)))
+       (#(rotate % -1))))
+
+#+end_src
+
+#+RESULTS:
+: [(32/27 9/8 32/27 9/8 9/8) (9/8 9/8 32/27 9/8 32/27) (9/8 32/27 9/8 9/8 32/27) (9/8 32/27 9/8 81/64 256/243) (81/64 256/243 9/8 81/64 256/243) (81/64 256/243 81/64 9/8 256/243) (32/27 9/8 256/243 81/64 9/8)]
+
+The sorting seems the most problematic, but the call to =scale-rotate= and the =* -1= also seem odd.
+
+*** Counter argument
+Though actually in the case of:
+
+#+begin_src clojure 
+(->> (submos/make-all-submos [1 1 2 1 1 2 1 2] 4)
+       (filter :true-submos?)
+       (filter #(= 3 (count (:pattern %))))
+       first
+       :submos
+       (mapv (juxt :degree :mos)))
+
+#+end_src
+
+#+RESULTS:
+: [[0 [4 4 3]] [1 [4 4 3]] [2 [4 5 2]] [3 [4 4 3]] [4 [4 4 3]] [5 [5 4 2]] [6 [4 4 3]] [7 [4 4 3]]]
+
+(For completing the table below with the chord's /chromatic degrees/)
+#+begin_src clojure
+(scale-steps->degrees [1 1 2 1 1 2 1 2]) 
+#+end_src
+
+#+RESULTS:
+: (0 1 2 4 5 6 8 9)
+
+
+The results are correct (see the ordering of the intervals).
+
+| Degree | 3     | 3     | 2   | Intervals | Chromatic degrees |
+|--------+-------+-------+-----+-----------+-------------------|
+|      0 | 1 1 2 | 1 1 2 | 1 2 | 4 4 3     | 0 4 8             |
+|      1 | 1 2 1 | 1 2 1 | 2 1 | 4 4 3     | 1 5 9             |
+|      2 | 2 1 1 | 2 1 2 | 1 1 | 4 5 2     | 2 6 11  / 2 6 0   |
+|      3 | 1 1 2 | 1 2 1 | 1 2 | 4 4 3     | 4 8 12  / 4 8 1   |
+|      4 | 1 2 1 | 2 1 1 | 2 1 | 4 4 3     | 5 9 13  / 5 9 2   |
+|      5 | 2 1 2 | 1 1 2 | 1 1 | 5 4 2     | 6 11 15 / 6 0 4   |
+|      6 | 1 2 1 | 1 2 1 | 1 2 | 4 4 3     | 8 12 16 / 8 1 5   |
+|      7 | 2 1 1 | 2 1 1 | 2 1 | 4 4 3     | 9 13 17 / 9 2 6   |
+
+Seems like it probably is correct and works as expected. Perhaps a helper function that sorts submos by their degrees would be a good solution.
+
+*** DONE The chromatic degrees do seem to be wrong:
+CLOSED: [2026-10-21 Wed 13:24]
+
+#+begin_src clojure 
+(->> (submos/make-all-submos [1 1 2 1 1 2 1 2] 4)
+       (filter :true-submos?)
+       (filter #(= 3 (count (:pattern %))))
+       first
+       :submos
+       (mapv (juxt :chromatic-degrees)))
+
+#+end_src
+
+#+RESULTS:
+: [[[0 4 8]] [[1 5 9]] [[2 6 0]] [[4 8 1]] [[5 9 2]] [[6 0 4]] [[8 1 5]] [[9 2 6]]]
+
+** TODO Rename =:true-submos?= to =:type=
+Which should be either =:secondary= or =:traverse=
+* TODO Arity of =rotate= should be the other way around
+=xs= should be last
+* TODO Arity of =get-degrees= should be the other way around
+As per use cases, most of the time the scale seems to be coming last
+* TODO Fix arity of =submos/make-all-submos= vector should be last
+should update tieminos and erv-web too
+* TODO Remove =true-submos?= predicate
+should update tieminos and erv-web too
+
+
+
